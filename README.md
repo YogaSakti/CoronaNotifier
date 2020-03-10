@@ -1,3 +1,3 @@
 # Corona Notifier
 #### The Diagram
-![Diagram]("Diagram.png")
+![Diagram](Diagram.png)
