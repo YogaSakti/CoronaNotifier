@@ -2,6 +2,17 @@ const request = require('request');
 const async = require('async');
 const fs = require('fs');
 
+var mqtt = require('mqtt')
+var client = mqtt.connect('mqtt://test.mosquitto.org')
+
+client.on('connect', function () {
+    client.subscribe('corona', function (err) {
+        if (!err) {
+            console.log('Mqtt subscribed!')
+        }
+    })
+})
+
 async.forever(
     function (next) {
         const options = {
@@ -22,8 +33,9 @@ async.forever(
                     fs.writeFile('./CoronaService/data.json', JSON.stringify(result), 'utf-8', function (err) {
                         if (err) throw err
                         console.log('New Update on Data.json')
+                        client.publish('corona', 'New Update!')
                     })
-                }else{
+                } else {
                     console.log('No Update on Data.json')
                 }
             })
