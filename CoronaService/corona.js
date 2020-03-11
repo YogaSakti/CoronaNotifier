@@ -12,14 +12,13 @@ async.forever(
         request(options, function (error, response) {
             if (error) throw new Error(error);
             const parseBody = JSON.parse(response.body)
-            const search = parseBody.features.filter(feature => feature.attributes.Country_Region === 'Indonesia');
-            const result = search[0].attributes
+            const filterBody = parseBody.features.filter(feature => feature.attributes.Country_Region === 'Indonesia');
+            const result = filterBody[0].attributes
 
             fs.readFile('./CoronaService/data.json', 'utf-8', function (err, data) {
                 if (err) throw err
-                const Objects = JSON.parse(data)
-    
-                if (result.Last_Update !== Objects.Last_Update) {
+                const localData = JSON.parse(data)
+                if (result.Last_Update !== localData.Last_Update) {
                     fs.writeFile('./CoronaService/data.json', JSON.stringify(result), 'utf-8', function (err) {
                         if (err) throw err
                         console.log('New Update on Data.json')
@@ -31,6 +30,7 @@ async.forever(
             setTimeout(function () {
                 next();
             }, 600000)
+            // Delay for 10 seconds
         });
 
     },
