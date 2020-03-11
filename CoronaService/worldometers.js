@@ -8,3 +8,4 @@ scraper
         // console.log(jsonData[0])
         console.log(search)
     });
+    

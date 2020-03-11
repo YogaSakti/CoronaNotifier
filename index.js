@@ -316,6 +316,4 @@ listen.on('message', function (topic, message) {
             `);
         })
     }
-    
-    
 })
