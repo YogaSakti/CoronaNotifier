@@ -30,7 +30,7 @@ async.forever(
             setTimeout(function () {
                 next();
             }, 600000)
-            // Delay for 10 seconds
+            // Delay for 10 minutes
         });
 
     },
