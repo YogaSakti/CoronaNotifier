@@ -14,7 +14,7 @@ async.forever(
             const parseBody = JSON.parse(response.body)
             const filterBody = parseBody.features.filter(feature => feature.attributes.Country_Region === 'Indonesia');
             const result = filterBody[0].attributes
-
+            //read, check, udpdate data from local json file.
             fs.readFile('./CoronaService/data.json', 'utf-8', function (err, data) {
                 if (err) throw err
                 const localData = JSON.parse(data)
@@ -30,7 +30,7 @@ async.forever(
             setTimeout(function () {
                 next();
             }, 600000)
-            // Delay for 10 minutes
+            // Delay for 10 minutes.
         });
 
     },
