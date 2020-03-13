@@ -47,6 +47,11 @@ client.on('authenticated', (session) => {
 client.on('auth_failure', msg => {
     // Fired if session restore was unsuccessfull
     console.error('AUTHENTICATION FAILURE \n', msg);
+    fs.unlink('./session.json', function (err) {
+        if (err) return console.log(err);
+        console.log('Session deleted, Restart!');
+        process.exit(1);
+    });
 });
 
 client.on('ready', () => {
@@ -232,6 +237,30 @@ client.on('message', async msg => {
         const chat = await msg.getChat();
         // stops typing or recording in the chat
         chat.clearState();
+    } else if (msg.body === '!corona') {
+        fs.readFile('./CoronaService/data.json', 'utf-8', function (err, data) {
+            if (err) throw err
+            const localData = JSON.parse(data)
+            const newCases = localData.NewCases === '' ? 0 : localData.NewCases;
+            const newDeaths = localData.NewDeaths === '' ? 0 : localData.NewDeaths;
+            const critical = localData.Critical === '' ? 0 : localData.Critical;
+            client.sendMessage(msg.from, `
+                    *COVID-19 Update!!*
+Negara: ${localData.Country}
+            
+Total Kasus: ${localData.TotalCases}
+Kasus Baru: ${newCases}
+
+Meninggal: ${localData.TotalDeaths}
+Meninggal Baru: ${newDeaths}
+
+Kasus aktif: ${localData.ActiveCases}
+Total Sembuh: ${localData.TotalRecovered}
+            
+Sumber: _https://www.worldometers.info/coronavirus/_
+            `);
+        })
+
 
         // ============================================= Groups
 
@@ -298,21 +327,39 @@ client.on('message', async msg => {
 listen.on('message', function (topic, message) {
     // message is Buffer
     // console.log(message.toString())
-    const number = //some number
+    const number = 6282324937376 //some number
     // number = number.includes('@c.us') ? number : `${number}@c.us`;
-    // const chat = await msg.getChat();
-    // chat.sendSeen();
-    if(message.toString() === 'New Update!'){
+    if (message.toString() === 'New Update!') {
         fs.readFile('./CoronaService/data.json', 'utf-8', function (err, data) {
             if (err) throw err
             const localData = JSON.parse(data)
+            // const time = localData.Last_Update.toString()
+            // client.sendMessage(`${number}@c.us`, `
+            // *Corona Update!!*
+            // Country: ${localData.Country_Region}
+            // Last Update: ${time}
+            // Confirmed: ${localData.Confirmed}
+            // Deaths: ${localData.Deaths}
+            // Recovered: ${localData.Recovered}
+            // `);
+            console.log(`MQTT: ${message.toString()}`)
+            const newCases = localData.NewCases === '' ? 0 : localData.NewCases;
+            const newDeaths = localData.NewDeaths === '' ? 0 : localData.NewDeaths;
             client.sendMessage(`${number}@c.us`, `
-                *Corona Update!!*
-                Country: ${localData.Country_Region}
-                Last Update: ${localData.Last_Update.toString()}
-                Confirmed: ${localData.Confirmed}
-                Deaths: ${localData.Deaths}
-                Recovered: ${localData.Recovered}
+                    *COVID-19 Update!!*
+Negara: ${localData.Country}
+            
+Total Kasus: ${localData.TotalCases}
+Kasus Baru: ${newCases}
+
+Meninggal: ${localData.TotalDeaths}
+Meninggal Baru: ${newDeaths}
+
+Kasus aktif: ${localData.ActiveCases}
+Total Sembuh: ${localData.TotalRecovered}
+            
+Update pada: ${Date(Date.now()).toString()}
+Sumber: _https://www.worldometers.info/coronavirus/_
             `);
         })
     }
