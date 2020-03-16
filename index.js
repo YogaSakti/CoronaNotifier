@@ -1,11 +1,14 @@
 const fs = require('fs');
+const moment = require('moment')
 const qrcode = require('qrcode-terminal');
 const {
     Client,
-    Location
+    Location,
+    MessageMedia
 } = require('whatsapp-web.js');
 const mqtt = require('mqtt')
 const listen = mqtt.connect('mqtt://test.mosquitto.org')
+const User = require('./user.js')
 
 const SESSION_FILE_PATH = './session.json';
 let sessionCfg;
@@ -15,7 +18,28 @@ if (fs.existsSync(SESSION_FILE_PATH)) {
 
 const client = new Client({
     puppeteer: {
-        headless: true
+        args: [
+            '--headless',
+            '--log-level=3', // fatal only
+            '--start-maximized',
+            '--no-default-browser-check',
+            '--disable-infobars',
+            '--disable-web-security',
+            '--disable-site-isolation-trials',
+            '--no-experiments',
+            '--ignore-gpu-blacklist',
+            '--ignore-certificate-errors',
+            '--ignore-certificate-errors-spki-list',
+            '--disable-gpu',
+            '--disable-extensions',
+            '--disable-default-apps',
+            '--enable-features=NetworkService',
+            '--disable-setuid-sandbox',
+            '--no-sandbox',
+            '--disable-accelerated-2d-canvas',
+            '--no-first-run',
+            '--no-zygote'
+        ]
     },
     session: sessionCfg
 });
@@ -30,12 +54,12 @@ client.on('qr', (qr) => {
     qrcode.generate(qr, {
         small: true
     });
-    console.log('Please Scan QR with app!');
+    console.log(`[ ${moment().format('HH:mm:ss')} ] Please Scan QR with app!`)
 });
 
 client.on('authenticated', (session) => {
-    console.log('Authenticated Success');
-    // console.log('AUTHENTICATED', session);
+    console.log(`[ ${moment().format('HH:mm:ss')} ] Authenticated Success!`)
+    // console.log(session);
     sessionCfg = session;
     fs.writeFile(SESSION_FILE_PATH, JSON.stringify(session), function (err) {
         if (err) {
@@ -46,24 +70,24 @@ client.on('authenticated', (session) => {
 
 client.on('auth_failure', msg => {
     // Fired if session restore was unsuccessfull
-    console.error('AUTHENTICATION FAILURE \n', msg);
+    console.log(`[ ${moment().format('HH:mm:ss')} ] AUTHENTICATION FAILURE \n ${msg}`)
     fs.unlink('./session.json', function (err) {
         if (err) return console.log(err);
-        console.log('Session deleted, Restart!');
+        console.log(`[ ${moment().format('HH:mm:ss')} ] Session Deleted, Please Restart!`)
         process.exit(1);
     });
 });
 
 client.on('ready', () => {
-    console.log('Whatsapp bot ready!');
+    console.log(`[ ${moment().format('HH:mm:ss')} ] Whatsapp bot ready!`)
 });
 
 // ======================= Begin initialize mqtt broker
 
-listen.on('connect', function () {
+listen.on('connect', () => {
     listen.subscribe('corona', function (err) {
         if (!err) {
-            console.log('Mqtt topic subscribed!')
+            console.log(`[ ${moment().format('HH:mm:ss')} ] Mqtt topic subscribed!`)
         }
     })
 })
@@ -131,8 +155,11 @@ client.on('disconnected', (reason) => {
 
 client.on('message', async msg => {
     console.log(`Message:`, msg.from.replace('@c.us', ''), `| ${msg.type}`, msg.body ? `| ${msg.body}` : '');
-
-    if (msg.body == '!ping reply') {
+    if (msg.type == 'ciphertext') {
+        // Send a new message as a reply to the current one
+        msg.reply('kirim ! menu atau !help untuk melihat menu.');
+    
+    } else if (msg.body == '!ping reply') {
         // Send a new message as a reply to the current one
         msg.reply('pong');
 
@@ -155,6 +182,21 @@ client.on('message', async msg => {
         const chats = await client.getChats();
         client.sendMessage(msg.from, `The bot has ${chats.length} chats open.`);
 
+    } else if (msg.body == '!info' || msg.body == '!help' || msg.body == '!menu') {
+        let localData = client.localData;
+        // console.log(localData);
+        client.sendMessage(msg.from, `
+*PERINTAH*
+!info/!help  =>  Menu
+!ping  =>  Tes bot
+
+*COVID-19* 
+!aktif  =>  Mengaktifkan notifikasi
+!mati  =>  Mematikan notifikasi
+!corona  =>  Informasi COVID-19 Indonesia
+
+`);
+
     } else if (msg.body == '!localData') {
         let localData = client.localData;
         // console.log(localData);
@@ -169,6 +211,7 @@ client.on('message', async msg => {
 
     } else if (msg.body == '!medialocalData' && msg.hasMedia) {
         const attachmentData = await msg.downloadMedia();
+        // console.log(attachmentData)
         msg.reply(`
             *Media localData*
             MimeType: ${attachmentData.mimetype}
@@ -237,13 +280,34 @@ client.on('message', async msg => {
         const chat = await msg.getChat();
         // stops typing or recording in the chat
         chat.clearState();
+
+    } else if (msg.body === '!mati') {
+        client.sendMessage(msg.from,
+            'Belum aktif, chat ke yoga'
+        );
+
+    } else if (msg.body === '!aktif' || msg.body === '!daftar') {
+        const dari = msg.from
+        User.addUser(dari)
+            .then(result => {
+                if (!result) {
+                    client.sendMessage(msg.from,
+                        'Maaf, anda telah terdaftar di sistem kami.'
+                    );
+                } else {
+                    client.sendMessage(msg.from,
+                        'Selamat, kamu berhasil mendaftar di sistem kami.'
+                    );
+                }
+                // console.log(result)
+
+            })
     } else if (msg.body === '!corona') {
         fs.readFile('./CoronaService/data.json', 'utf-8', function (err, data) {
             if (err) throw err
             const localData = JSON.parse(data)
             const newCases = localData.NewCases === '' ? 0 : localData.NewCases;
             const newDeaths = localData.NewDeaths === '' ? 0 : localData.NewDeaths;
-            const critical = localData.Critical === '' ? 0 : localData.Critical;
             client.sendMessage(msg.from, `
                     *COVID-19 Update!!*
 Negara: ${localData.Country}
@@ -259,6 +323,9 @@ Total Sembuh: ${localData.TotalRecovered}
             
 Sumber: _https://www.worldometers.info/coronavirus/_
             `);
+            var imageAsBase64 = fs.readFileSync('./CoronaService/corona.png', 'base64');
+            var CoronaImage = new MessageMedia("image/png", imageAsBase64);
+            client.sendMessage(msg.from, CoronaImage);
         })
 
 
@@ -320,47 +387,50 @@ Sumber: _https://www.worldometers.info/coronavirus/_
         } else {
             msg.reply('This command can only be used in a group!');
         }
-
     }
 });
 
-listen.on('message', function (topic, message) {
-    // message is Buffer
-    // console.log(message.toString())
-    const number = 6282324937376 //some number
-    // number = number.includes('@c.us') ? number : `${number}@c.us`;
-    if (message.toString() === 'New Update!') {
-        fs.readFile('./CoronaService/data.json', 'utf-8', function (err, data) {
-            if (err) throw err
-            const localData = JSON.parse(data)
-            // const time = localData.Last_Update.toString()
-            // client.sendMessage(`${number}@c.us`, `
-            // *Corona Update!!*
-            // Country: ${localData.Country_Region}
-            // Last Update: ${time}
-            // Confirmed: ${localData.Confirmed}
-            // Deaths: ${localData.Deaths}
-            // Recovered: ${localData.Recovered}
-            // `);
-            console.log(`MQTT: ${message.toString()}`)
-            const newCases = localData.NewCases === '' ? 0 : localData.NewCases;
-            const newDeaths = localData.NewDeaths === '' ? 0 : localData.NewDeaths;
-            client.sendMessage(`${number}@c.us`, `
+listen.on('message', (topic, message) => {
+    console.log(`[ ${moment().format('HH:mm:ss')} ] MQTT: ${message.toString()}`)
+    fs.readFile('./CoronaService/user.json', 'utf-8', function (err, data) {
+        if (err) throw err
+        const userData = JSON.parse(data)
+        for (var i = 0; i < userData.length; i++) {
+            let number = userData[i].user;
+            // number = number.includes('@c.us') ? number : `${number}@c.us`;
+            setTimeout(function () {
+                console.log(`[ ${moment().format('HH:mm:ss')} ] Send Corona Update to ${number}`)
+                if (message.toString() === 'New Update!') {
+                    fs.readFile('./CoronaService/data.json', 'utf-8', function (err, data) {
+                        if (err) throw err
+                        const localData = JSON.parse(data)
+                        const newCases = localData.NewCases === '' ? 0 : localData.NewCases;
+                        const newDeaths = localData.NewDeaths === '' ? 0 : localData.NewDeaths;
+                        client.sendMessage(number, `
                     *COVID-19 Update!!*
 Negara: ${localData.Country}
-            
+                    
 Total Kasus: ${localData.TotalCases}
 Kasus Baru: ${newCases}
-
+        
 Meninggal: ${localData.TotalDeaths}
 Meninggal Baru: ${newDeaths}
-
+        
 Kasus aktif: ${localData.ActiveCases}
 Total Sembuh: ${localData.TotalRecovered}
-            
-Update pada: ${Date(Date.now()).toString()}
+                    
+Dicek pada: ${Date(Date.now()).toString()}
 Sumber: _https://www.worldometers.info/coronavirus/_
-            `);
-        })
-    }
+                    `);
+
+                    })
+                }
+                // console.log(`[ ${moment().format('HH:mm:ss')} ] Delay 5 Sec`)
+            }, i * 5000)
+
+        }
+
+    })
+
+
 })
