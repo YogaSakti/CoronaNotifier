@@ -4,6 +4,7 @@ const moment = require('moment')
 const {
     Tabletojson: tabletojson
 } = require('tabletojson');
+const fetch = require('node-fetch');
 
 const mqtt = require('mqtt')
 const client = mqtt.connect('mqtt://test.mosquitto.org')
@@ -16,8 +17,23 @@ client.on('connect', () => {
     })
 })
 
+async function GetImage(url, path) {
+    const res = await fetch(url);
+    const fileStream = fs.createWriteStream(path);
+    await new Promise((resolve, reject) => {
+        res.body.pipe(fileStream);
+        res.body.on("error", (err) => {
+            reject(err);
+        });
+        fileStream.on("finish", function () {
+            resolve();
+        });
+    });
+};
+
 async.forever(
-    function (next) {
+    function (corona) {
+        GetImage('https://covid19.mathdro.id/api/og?width=1024&height=1024','./CoronaService/corona.png')
         tabletojson.convertUrl('https://www.worldometers.info/coronavirus/', {
                 useFirstRowForHeadings: true
             },
@@ -40,7 +56,7 @@ async.forever(
                     }
                 })
                 setTimeout(function () {
-                    next();
+                    corona();
                 }, 300000)
                 // Delay for 5 minutes.
             }
