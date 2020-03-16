@@ -18,6 +18,6 @@
     "node-fetch": "^2.6.0",
     "qrcode-terminal": "^0.12.0",
     "tabletojson": "^2.0.3",
-    "whatsapp-web.js": "^1.2.1"
+    "whatsapp-web.js": "^1.2.5"
   }
 }
