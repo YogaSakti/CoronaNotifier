@@ -158,7 +158,7 @@ client.on('message', async msg => {
     if (msg.type == 'ciphertext') {
         // Send a new message as a reply to the current one
         msg.reply('kirim ! menu atau !help untuk melihat menu.');
-    
+
     } else if (msg.body == '!ping reply') {
         // Send a new message as a reply to the current one
         msg.reply('pong');
@@ -282,26 +282,42 @@ client.on('message', async msg => {
         chat.clearState();
 
     } else if (msg.body === '!mati') {
-        client.sendMessage(msg.from,
-            'Belum aktif, chat ke yoga'
-        );
+        User.checkUser(msg.from).then(result => {
+            if (result) {
+                User.removeUser(msg.from)
+                    .then(result => {
+                        console.log(result)
+                        if (result) {
+                            client.sendMessage(msg.from,
+                                'Berhasil menonaktifkan, anda tidak akan mendapat notifikasi lagi.'
+                            );
+                        } else {
+                            client.sendMessage(msg.from,
+                                'Gagal menonaktifkan, nomor tidak terdaftar.'
+                            );
+                        }
+                    })
+            } else {
+                client.sendMessage(msg.from,
+                    'Gagal menonaktifkan, nomor tidak terdaftar.'
+                );
+            }
+        })
 
     } else if (msg.body === '!aktif' || msg.body === '!daftar') {
-        const dari = msg.from
-        User.addUser(dari)
+        User.addUser(msg.from)
             .then(result => {
                 if (!result) {
                     client.sendMessage(msg.from,
-                        'Maaf, anda telah terdaftar di sistem kami.'
+                        'Notifikasi sudah aktif.'
                     );
                 } else {
                     client.sendMessage(msg.from,
-                        'Selamat, kamu berhasil mendaftar di sistem kami.'
+                        'Berhasil mengaktifkan notifikasi.'
                     );
                 }
-                // console.log(result)
-
             })
+
     } else if (msg.body === '!corona') {
         fs.readFile('./CoronaService/data.json', 'utf-8', function (err, data) {
             if (err) throw err
@@ -425,7 +441,7 @@ Sumber: _https://www.worldometers.info/coronavirus/_
 
                     })
                 }
-                // console.log(`[ ${moment().format('HH:mm:ss')} ] Delay 5 Sec`)
+                // Delay 5 Sec
             }, i * 5000)
 
         }
