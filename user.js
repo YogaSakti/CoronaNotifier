@@ -1,5 +1,5 @@
 const fs = require('fs');
-const json = require('./CoronaService/user.json');
+const moment = require('moment')
 
 function checkUser(nomor) {
     return new Promise((resolve, reject) => {
@@ -33,6 +33,7 @@ function addUser(user) {
                 } else {
                     fs.writeFile('./CoronaService/user.json', JSON.stringify(parsed), (err) => {
                         if (err) reject(err)
+                        console.log(`[ ${moment().format('HH:mm:ss')} ] Add User ${user}`)
                         resolve(true)
                     })
                 }
@@ -47,11 +48,11 @@ function removeUser(nomor) {
         fs.readFile('./CoronaService/user.json', 'utf-8', function (err, data) {
             if (err) reject(err)
             const parsed = JSON.parse(data)
-            console.log(parsed)
             if (parsed.findIndex(x => x.user === nomor) !== undefined && parsed.findIndex(x => x.user === nomor) !== -1) {
                 parsed.splice(parsed.findIndex(x => x.user === nomor), 1);
                 fs.writeFile('./CoronaService/user.json', JSON.stringify(parsed), (err) => {
                     if (err) reject(err)
+                    console.log(`[ ${moment().format('HH:mm:ss')} ] Delete User ${nomor}`)
                     resolve(true)
                 })
             }

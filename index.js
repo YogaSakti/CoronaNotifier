@@ -9,6 +9,7 @@ const {
 const mqtt = require('mqtt')
 const listen = mqtt.connect('mqtt://test.mosquitto.org')
 const User = require('./user.js')
+const corona = require('./CoronaService/covid19.js')
 
 const SESSION_FILE_PATH = './session.json';
 let sessionCfg;
@@ -103,15 +104,15 @@ client.on('message_create', (msg) => {
 
 client.on('message_revoke_everyone', async (after, before) => {
     // Fired whenever a message is deleted by anyone (including you)
-    console.log(after); // message after it was deleted.
+    // console.log(after); // message after it was deleted.
     if (before) {
-        console.log(before); // message before it was deleted.
+        console.log(before.body); // message before it was deleted.
     }
 });
 
 client.on('message_revoke_me', async (msg) => {
     // Fired whenever a message is only deleted in your own view.
-    console.log(msg.body); // message before it was deleted.
+    // console.log(msg.body); // message before it was deleted.
 });
 
 client.on('message_ack', (msg, ack) => {
@@ -154,7 +155,8 @@ client.on('disconnected', (reason) => {
 // ======================= WaBot Listen on message 
 
 client.on('message', async msg => {
-    console.log(`Message:`, msg.from.replace('@c.us', ''), `| ${msg.type}`, msg.body ? `| ${msg.body}` : '');
+    console.log(`[ ${moment().format('HH:mm:ss')} ] Message:`, msg.from.replace('@c.us', ''), `| ${msg.type}`, msg.body ? `| ${msg.body}` : '');
+    
     if (msg.type == 'ciphertext') {
         // Send a new message as a reply to the current one
         msg.reply('kirim ! menu atau !help untuk melihat menu.');
@@ -282,43 +284,53 @@ client.on('message', async msg => {
         chat.clearState();
 
     } else if (msg.body === '!mati') {
-        User.checkUser(msg.from).then(result => {
-            if (result) {
-                User.removeUser(msg.from)
-                    .then(result => {
-                        console.log(result)
-                        if (result) {
-                            client.sendMessage(msg.from,
-                                'Berhasil menonaktifkan, anda tidak akan mendapat notifikasi lagi.'
-                            );
-                        } else {
-                            client.sendMessage(msg.from,
-                                'Gagal menonaktifkan, nomor tidak terdaftar.'
-                            );
-                        }
-                    })
-            } else {
-                client.sendMessage(msg.from,
-                    'Gagal menonaktifkan, nomor tidak terdaftar.'
-                );
-            }
-        })
-
-    } else if (msg.body === '!aktif' || msg.body === '!daftar') {
-        User.addUser(msg.from)
-            .then(result => {
-                if (!result) {
-                    client.sendMessage(msg.from,
-                        'Notifikasi sudah aktif.'
-                    );
+        let chat = await msg.getChat();
+        if (chat.isGroup) {
+            msg.reply('Maaf, perintah ini tidak bisa digunakan di dalam grup!');
+        } else {
+            User.checkUser(msg.from).then(result => {
+                if (result) {
+                    User.removeUser(msg.from)
+                        .then(result => {
+                            if (result) {
+                                client.sendMessage(msg.from,
+                                    'Berhasil menonaktifkan, anda tidak akan mendapat notifikasi lagi.'
+                                );
+                            } else {
+                                client.sendMessage(msg.from,
+                                    'Gagal menonaktifkan, nomor tidak terdaftar.'
+                                );
+                            }
+                        })
                 } else {
                     client.sendMessage(msg.from,
-                        'Berhasil mengaktifkan notifikasi.'
+                        'Gagal menonaktifkan, nomor tidak terdaftar.'
                     );
                 }
             })
+        }
 
-    } else if (msg.body === '!corona') {
+
+    } else if (msg.body === '!aktif' || msg.body === '!daftar') {
+        let chat = await msg.getChat();
+        if (chat.isGroup) {
+            msg.reply('Maaf, perintah ini tidak bisa digunakan di dalam grup!');
+        } else {
+            User.addUser(msg.from)
+                .then(result => {
+                    if (!result) {
+                        client.sendMessage(msg.from,
+                            'Notifikasi sudah aktif.'
+                        );
+                    } else {
+                        client.sendMessage(msg.from,
+                            'Berhasil mengaktifkan notifikasi.'
+                        );
+                    }
+                })
+        }
+
+    } else if (msg.body === '!coronaOld') {
         fs.readFile('./CoronaService/data.json', 'utf-8', function (err, data) {
             if (err) throw err
             const localData = JSON.parse(data)
@@ -327,15 +339,15 @@ client.on('message', async msg => {
             client.sendMessage(msg.from, `
                     *COVID-19 Update!!*
 Negara: ${localData.Country}
-            
-Total Kasus: ${localData.TotalCases}
+
+*Kasus aktif: ${localData.ActiveCases}*
+*Total Kasus: ${localData.TotalCases}*
 Kasus Baru: ${newCases}
 
-Meninggal: ${localData.TotalDeaths}
+*Meninggal: ${localData.TotalDeaths}*
 Meninggal Baru: ${newDeaths}
 
-Kasus aktif: ${localData.ActiveCases}
-Total Sembuh: ${localData.TotalRecovered}
+*Total Sembuh: ${localData.TotalRecovered}*
             
 Sumber: _https://www.worldometers.info/coronavirus/_
             `);
@@ -344,6 +356,34 @@ Sumber: _https://www.worldometers.info/coronavirus/_
             client.sendMessage(msg.from, CoronaImage);
         })
 
+    } else if (msg.body === '!corona') {
+        corona.getAll()
+            .then(result => {
+                var aktifIndo = result[0].confirmed - result[0].recovered - result[0].deaths
+// var aktifGlob = result[1].confirmed - result[1].recovered - result[1].
+// Kasus *Global*
+// Total Kasus: ${result[1].confirmed}
+// Kasus aktif: ${aktifGlob}
+// Sembuh: ${result[1].recovered}
+// Meninggal: ${result[1].deaths}
+// Update Pada: 
+// ${result[1].lastUpdate}
+                client.sendMessage(msg.from, `
+                    *COVID-19 Update!!*
+
+Kasus *Indonesia*
+Total Kasus: ${result[0].confirmed}
+Kasus aktif: ${aktifIndo}
+Sembuh: ${result[0].recovered}
+Meninggal: ${result[0].deaths}
+
+Update Pada: 
+${result[0].lastUpdate.replace("pukul","|")} WIB
+        `);
+        var imageAsBase64 = fs.readFileSync('./CoronaService/corona.png', 'base64');
+        var CoronaImage = new MessageMedia("image/png", imageAsBase64);
+        client.sendMessage(msg.from, CoronaImage);
+            })
 
         // ============================================= Groups
 
@@ -425,24 +465,25 @@ listen.on('message', (topic, message) => {
                         client.sendMessage(number, `
                     *COVID-19 Update!!*
 Negara: ${localData.Country}
-                    
+
+Kasus aktif: ${localData.ActiveCases}
 Total Kasus: ${localData.TotalCases}
-Kasus Baru: ${newCases}
+*Kasus Baru: ${newCases}*
         
 Meninggal: ${localData.TotalDeaths}
-Meninggal Baru: ${newDeaths}
+*Meninggal Baru: ${newDeaths}*
         
-Kasus aktif: ${localData.ActiveCases}
 Total Sembuh: ${localData.TotalRecovered}
                     
-Dicek pada: ${Date(Date.now()).toString()}
-Sumber: _https://www.worldometers.info/coronavirus/_
+Dicek pada: ${moment().format('LLLL').replace("pukul","|")} WIB
+Sumber: 
+_https://www.worldometers.info/coronavirus/_
                     `);
 
                     })
                 }
-                // Delay 5 Sec
-            }, i * 5000)
+                // Delay 3 Sec
+            }, i * 3000)
 
         }
 
