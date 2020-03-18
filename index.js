@@ -155,8 +155,9 @@ client.on('disconnected', (reason) => {
 // ======================= WaBot Listen on message 
 
 client.on('message', async msg => {
-    console.log(`[ ${moment().format('HH:mm:ss')} ] Message:`, msg.from.replace('@c.us', ''), `| ${msg.type}`, msg.body ? `| ${msg.body}` : '');
-    
+    msg.from.includes('@c.us') ? console.log(`[ ${moment().format('HH:mm:ss')} ] Message:`, msg.from.replace('@c.us', ''), `| ${msg.type}`, msg.body ? `| ${msg.body}` : '') : ''
+    msg.from.includes('@g.us') ? console.log(`[ ${moment().format('HH:mm:ss')} ] Message:`, msg.from.replace('@g.us', ''), `| ${msg.type}`) : ''
+
     if (msg.type == 'ciphertext') {
         // Send a new message as a reply to the current one
         msg.reply('kirim ! menu atau !help untuk melihat menu.');
@@ -174,19 +175,24 @@ client.on('message', async msg => {
         let number = msg.body.split(' ')[1];
         let messageIndex = msg.body.indexOf(number) + number.length;
         let message = msg.body.slice(messageIndex, msg.body.length);
-        number = number.includes('@c.us') ? number : `${number}@c.us`;
-        let chat = await msg.getChat();
-        chat.sendSeen();
-        client.sendMessage(number, message);
-
+        if (number.includes('@g.us')) {
+            let group = await client.getChatById(number);
+            group.sendMessage(message)
+        } else if (!number.includes('@c.us') && !number.includes('@g.us')) {
+            number = number.includes('@c.us') ? number : `${number}@c.us`;
+            let chat = await msg.getChat();
+            chat.sendSeen();
+            client.sendMessage(number, message);
+        }
 
     } else if (msg.body == '!chats') {
         const chats = await client.getChats();
-        client.sendMessage(msg.from, `The bot has ${chats.length} chats open.`);
-
+        fs.readFile('./CoronaService/user.json', 'utf-8', function (err, data) {
+            if (err) throw err
+            const userData = JSON.parse(data)
+            client.sendMessage(msg.from, `The bot has ${chats.length} chats open and ${userData.length} users.`);
+        })
     } else if (msg.body == '!info' || msg.body == '!help' || msg.body == '!menu') {
-        let localData = client.localData;
-        // console.log(localData);
         client.sendMessage(msg.from, `
 *PERINTAH*
 !info/!help  =>  Menu
@@ -197,11 +203,12 @@ client.on('message', async msg => {
 !mati  =>  Mematikan notifikasi
 !corona  =>  Informasi COVID-19 Indonesia
 
+
 `);
 
     } else if (msg.body == '!localData') {
         let localData = client.localData;
-        // console.log(localData);
+        console.log(localData);
         client.sendMessage(msg.from, `
             *Connection localData*
             User name: ${localData.pushname}
@@ -324,50 +331,54 @@ client.on('message', async msg => {
                         );
                     } else {
                         client.sendMessage(msg.from,
-                            'Berhasil mengaktifkan notifikasi.'
+                            'Berhasil mengaktifkan notifikasi, anda akan mendapat notifikasi ketika ada permbaruan data.'
                         );
                     }
                 })
         }
 
-    } else if (msg.body === '!coronaOld') {
+    } else if (msg.body === '!corona' || msg.body === '!CORONA'|| msg.body === '!Corona' || msg.body === '!covid') {
         fs.readFile('./CoronaService/data.json', 'utf-8', function (err, data) {
             if (err) throw err
             const localData = JSON.parse(data)
             const newCases = localData.NewCases === '' ? 0 : localData.NewCases;
             const newDeaths = localData.NewDeaths === '' ? 0 : localData.NewDeaths;
+            const NewRecovered = localData.NewRecovered === '' ? 0 : localData.NewRecovered;
             client.sendMessage(msg.from, `
                     *COVID-19 Update!!*
 Negara: ${localData.Country}
+Total Kasus: ${localData.TotalCases}
 
-*Kasus aktif: ${localData.ActiveCases}*
-*Total Kasus: ${localData.TotalCases}*
-Kasus Baru: ${newCases}
+Kasus aktif: ${localData.ActiveCases}
+*Kasus Baru: ${newCases}*
 
-*Meninggal: ${localData.TotalDeaths}*
-Meninggal Baru: ${newDeaths}
+Meninggal: ${localData.TotalDeaths}
+*Meninggal Baru: ${newDeaths}*
 
-*Total Sembuh: ${localData.TotalRecovered}*
-            
-Sumber: _https://www.worldometers.info/coronavirus/_
+Sembuh: ${localData.TotalRecovered}
+*Sembuh Baru: ${NewRecovered}*
+
+Dicek pada: ${localData.lastUpdate}
+Sumber: 
+_www.worldometers.info/coronavirus/_
             `);
             var imageAsBase64 = fs.readFileSync('./CoronaService/corona.png', 'base64');
             var CoronaImage = new MessageMedia("image/png", imageAsBase64);
             client.sendMessage(msg.from, CoronaImage);
         })
 
-    } else if (msg.body === '!corona') {
+    } else if (msg.body === '!coronaOld') {
         corona.getAll()
             .then(result => {
                 var aktifIndo = result[0].confirmed - result[0].recovered - result[0].deaths
-// var aktifGlob = result[1].confirmed - result[1].recovered - result[1].
-// Kasus *Global*
-// Total Kasus: ${result[1].confirmed}
-// Kasus aktif: ${aktifGlob}
-// Sembuh: ${result[1].recovered}
-// Meninggal: ${result[1].deaths}
-// Update Pada: 
-// ${result[1].lastUpdate}
+                // var aktifGlob = result[1].confirmed - result[1].recovered - result[1].
+                // Kasus *Global*
+                // Total Kasus: ${result[1].confirmed}
+                // Kasus aktif: ${aktifGlob}
+                // Sembuh: ${result[1].recovered}
+                // Meninggal: ${result[1].deaths}
+                // Update Pada: 
+                // ${result[1].lastUpdate}
                 client.sendMessage(msg.from, `
                     *COVID-19 Update!!*
 
@@ -380,9 +391,9 @@ Meninggal: ${result[0].deaths}
 Update Pada: 
 ${result[0].lastUpdate.replace("pukul","|")} WIB
         `);
-        var imageAsBase64 = fs.readFileSync('./CoronaService/corona.png', 'base64');
-        var CoronaImage = new MessageMedia("image/png", imageAsBase64);
-        client.sendMessage(msg.from, CoronaImage);
+                var imageAsBase64 = fs.readFileSync('./CoronaService/corona.png', 'base64');
+                var CoronaImage = new MessageMedia("image/png", imageAsBase64);
+                client.sendMessage(msg.from, CoronaImage);
             })
 
         // ============================================= Groups
@@ -462,22 +473,24 @@ listen.on('message', (topic, message) => {
                         const localData = JSON.parse(data)
                         const newCases = localData.NewCases === '' ? 0 : localData.NewCases;
                         const newDeaths = localData.NewDeaths === '' ? 0 : localData.NewDeaths;
+                        const NewRecovered = localData.NewRecovered === '' ? 0 : localData.NewRecovered;
                         client.sendMessage(number, `
                     *COVID-19 Update!!*
 Negara: ${localData.Country}
+Total Kasus: ${localData.TotalCases}
 
 Kasus aktif: ${localData.ActiveCases}
-Total Kasus: ${localData.TotalCases}
 *Kasus Baru: ${newCases}*
         
 Meninggal: ${localData.TotalDeaths}
 *Meninggal Baru: ${newDeaths}*
         
-Total Sembuh: ${localData.TotalRecovered}
+Sembuh: ${localData.TotalRecovered}
+*Sembuh Baru: ${NewRecovered}*
                     
-Dicek pada: ${moment().format('LLLL').replace("pukul","|")} WIB
+Dicek pada: ${localData.lastUpdate}
 Sumber: 
-_https://www.worldometers.info/coronavirus/_
+_www.worldometers.info/coronavirus/_
                     `);
 
                     })
