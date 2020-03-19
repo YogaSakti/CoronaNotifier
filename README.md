@@ -4,8 +4,7 @@
 ![node](https://img.shields.io/node/v/sulla-hotfix)
 ![Twitter](https://img.shields.io/twitter/follow/teman_bahagia?style=social)
 
-hi, my name is Honk! 🤖 a Whatsapp robot who will tell you information about COVID-19 in Indonesia. my main goal is to give you the latest data notifications about the COVID-19 case taken from the [worldometers](https://www.worldometers.info/coronavirus/) 
-
+Corona Notifier is a Whatsapp automatic notification robot using MQTT & nodeJS. The Corona Service will collect latest data about the COVID-19 indonesian case from the [worldometers](https://www.worldometers.info/coronavirus/) 
 
 
 ## Bot Whatsapp Command
