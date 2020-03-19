@@ -15,27 +15,36 @@ Corona Notifier is a Whatsapp automatic notification robot using MQTT & nodeJS. 
 This project require MQTT broker, nodeJS
 
 Clone this project
+
 ```bash
 > git clone https://github.com/YogaSakti/CoronaNotifier.git
 > cd CoronaNotifier
 
 ```
+
 Install the dependencies:
+
 ```bash
 > npm i
 ```
+
 run the Whatsapp bot
+
 ```bash
 > node index.js
 ```
+
 after running it you need to scan the qr
+
 run the corona service
+
 ```bash
 > node CoronaService\corona.js
 ```
 
 ## Bot Whatsapp Command
 (WARNING: This is only available with Bahasa Language)
+
 This bot is for covid-19 information purpose by automatically answer for available data, by using the available command :
 1. !help 
 The introduction and list of available command, example output
