@@ -21,7 +21,6 @@ Clone this project
 
 ```
 Install the dependencies:
-
 ```bash
 > npm i
 ```
@@ -29,6 +28,7 @@ run the Whatsapp bot
 ```bash
 > node index.js
 ```
+after running it you need to scan the qr
 run the corona service
 ```bash
 > node CoronaService\corona.js
