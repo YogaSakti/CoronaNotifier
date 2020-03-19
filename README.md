@@ -55,9 +55,9 @@ COVID-19
 !mati  =>  ......
 ```
 2. !ping 
-The bot will response "pong"
+Using This command will response "pong"
 3. !corona 
-This will return information about current indonesia corona case and global case, example output
+Using This command will return information about current indonesia corona case and global case, example output
 ```
          COVID-19 Update!!
 Negara: xx
@@ -75,9 +75,9 @@ Sembuh Baru: xx
 Dicek pada: xxx, xx xxxx 2020 | xx.xx WIB
 ```
 4. !aktif 
-This will enable notifications when there is a data update.
+Using This command will enable notifications when there is a data update.
 5. !mati 
-This will disable notifications when there is a data update.
+Using This command will disable notifications when there is a data update.
 6. !peta 
-This will return the corona virus distribution map information.
+Using This command will return the corona virus distribution map information.
 
