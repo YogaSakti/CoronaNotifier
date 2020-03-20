@@ -1,3 +1,4 @@
+require('dotenv').config()
 const async = require('async');
 const fs = require('fs');
 const moment = require('moment')
@@ -11,9 +12,9 @@ const mqtt = require('mqtt')
 const client = mqtt.connect('mqtt://test.mosquitto.org')
 
 client.on('connect', () => {
-    client.subscribe('corona', function (err) {
+    client.subscribe(process.env.MQTT_TOPIC, function (err) {
         if (!err) {
-            console.log(`[ ${moment().format('HH:mm:ss')} ] Mqtt subscribed!`)
+            console.log(`[ ${moment().format('HH:mm:ss')} ] Mqtt topic [${process.env.MQTT_TOPIC}] subscribed!`)
         }
     })
 })
@@ -48,13 +49,16 @@ async.forever(
                 fs.readFile('./CoronaService/data.json', 'utf-8', function (err, data) {
                     if (err) throw err
                     const localData = JSON.parse(data)
-                    result.NewRecovered = result.TotalRecovered - localData.TotalRecovered === 0 ? '' : `+${result.TotalRecovered - localData.TotalRecovered}`
+                    var recover = result.TotalRecovered - localData.TotalRecovered
+                    result.NewRecovered = `+${recover}`
+                    result.NewCases === '' ? result.NewCases = `+0`: result.NewCases
+                    result.NewDeaths === '' ? result.NewDeaths = `+0`: result.NewDeaths
                     if (result.TotalCases !== localData.TotalCases || result.TotalDeaths !== localData.TotalDeaths || result.TotalRecovered !== localData.TotalRecovered) {
                         result.lastUpdate = `${moment().format('LLLL').replace("pukul","|")} WIB`
                         fs.writeFile('./CoronaService/data.json', JSON.stringify(result), 'utf-8', function (err) {
                             if (err) throw err
                             console.log(`[ ${moment().format('HH:mm:ss')} ] New Update on Data.json`)
-                            client.publish('corona', 'New Update!')
+                            client.publish(process.env.MQTT_TOPIC, 'New Update!')
                         })
                     } else {
                         result.lastUpdate = localData.lastUpdate
