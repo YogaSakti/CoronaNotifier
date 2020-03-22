@@ -1,10 +1,9 @@
 # Corona Notifier 
-![GitHub last commit](https://img.shields.io/github/last-commit/k1m0ch1/covid-19-api)
-[![npm version](https://img.shields.io/npm/v/sulla-hotfix.svg?color=green)](https://www.npmjs.com/package/sulla-hotfix)
-![node](https://img.shields.io/node/v/sulla-hotfix)
+![GitHub last commit](https://img.shields.io/github/last-commit/YogaSakti/CoronaNotifier)
+[![whatsapp-web.js version](https://img.shields.io/github/package-json/dependency-version/YogaSakti/CoronaNotifier/whatsapp-web.js)](https://www.npmjs.com/package/whatsapp-web.js)
 ![Twitter](https://img.shields.io/twitter/follow/teman_bahagia?style=social)
 
-Corona Notifier is a Whatsapp automatic notification robot using MQTT & nodeJS. The Corona Service will collect latest data about the COVID-19 indonesian case from the [worldometers](https://www.worldometers.info/coronavirus/)
+Corona Notifier is a Whatsapp automatic notification robot using MQTT & nodeJS. The Corona Service will collect latest data about the COVID-19 indonesian case from [indonesia-covid-19-api](https://indonesia-covid-19.mathdro.id/api) by [mathdroid](https://github.com/mathdroid/indonesia-covid-19-api)
 
 #### The Diagram
 ![Diagram](Diagram.png)
@@ -26,6 +25,12 @@ Install the dependencies:
 
 ```bash
 > npm i
+```
+
+Edit MQTT topic in .env file:
+
+```
+MQTT_TOPIC= ....
 ```
 
 run the Whatsapp bot
@@ -55,29 +60,33 @@ COVID-19
 !mati  =>  ......
 ```
 2. !ping 
-Using This command will response "pong"
+Using this command will response "pong"
 3. !corona 
-Using This command will return information about current indonesia corona case and global case, example output
+Using this command will return information about current indonesia corona case and global case, example output
 ```
          COVID-19 Update!!
 Negara: xx
+
 Total Kasus: xx
-
-Kasus aktif: xx
 Kasus Baru: xx
-
-Meninggal: xx
-Meninggal Baru: xx
+Total Pasien: xx
 
 Sembuh: xx
 Sembuh Baru: xx
+Presentase Sembuh: xx.xx%
+
+Meninggal: xx
+Meninggal Baru: xx
+Presentase Meninggal: xx.xx%
 
 Dicek pada: xxx, xx xxxx 2020 | xx.xx WIB
 ```
 4. !aktif 
-Using This command will enable notifications when there is a data update.
+Using this command will enable notifications when there is a data update.
 5. !mati 
-Using This command will disable notifications when there is a data update.
-6. !peta 
-Using This command will return the corona virus distribution map information.
+Using this command will disable notifications when there is a data update.
+6. !data
+Using this command will return a list of websites that contain coronavirus data.
+7. !peta 
+Using this command will return the corona virus distribution map information.
 
