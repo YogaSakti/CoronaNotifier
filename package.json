@@ -14,7 +14,7 @@
     "async": "^3.2.0",
     "dotenv": "^8.2.0",
     "fs": "0.0.1-security",
-    "moment": "^2.24.0",
+    "moment-timezone": "^0.5.28",
     "mqtt": "^3.0.0",
     "node-fetch": "^2.6.0",
     "node-html-to-image": "^1.1.0",

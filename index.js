@@ -1,6 +1,6 @@
 require('dotenv').config()
 const fs = require('fs');
-const moment = require('moment')
+const moment = require('moment-timezone');
 const qrcode = require('qrcode-terminal');
 const {
     Client,
@@ -56,11 +56,11 @@ client.on('qr', (qr) => {
     qrcode.generate(qr, {
         small: true
     });
-    console.log(`[ ${moment().format('HH:mm:ss')} ] Please Scan QR with app!`)
+    console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Please Scan QR with app!`)
 });
 
 client.on('authenticated', (session) => {
-    console.log(`[ ${moment().format('HH:mm:ss')} ] Authenticated Success!`)
+    console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Authenticated Success!`)
     // console.log(session);
     sessionCfg = session;
     fs.writeFile(SESSION_FILE_PATH, JSON.stringify(session), function (err) {
@@ -72,16 +72,16 @@ client.on('authenticated', (session) => {
 
 client.on('auth_failure', msg => {
     // Fired if session restore was unsuccessfull
-    console.log(`[ ${moment().format('HH:mm:ss')} ] AUTHENTICATION FAILURE \n ${msg}`)
+    console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] AUTHENTICATION FAILURE \n ${msg}`)
     fs.unlink('./session.json', function (err) {
         if (err) return console.log(err);
-        console.log(`[ ${moment().format('HH:mm:ss')} ] Session Deleted, Please Restart!`)
+        console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Session Deleted, Please Restart!`)
         process.exit(1);
     });
 });
 
 client.on('ready', () => {
-    console.log(`[ ${moment().format('HH:mm:ss')} ] Whatsapp bot ready!`)
+    console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Whatsapp bot ready!`)
 });
 
 // ======================= Begin initialize mqtt broker
@@ -89,13 +89,13 @@ client.on('ready', () => {
 listen.on('connect', () => {
     listen.subscribe(process.env.MQTT_TOPIC, function (err) {
         if (!err) {
-            console.log(`[ ${moment().format('HH:mm:ss')} ] Mqtt topic [${process.env.MQTT_TOPIC}] subscribed!`)
+            console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Mqtt topic [${process.env.MQTT_TOPIC}] subscribed!`)
         }
     })
 })
 
 listen.on('message', (topic, message) => {
-    console.log(`[ ${moment().format('HH:mm:ss')} ] Message: ${message.toString()}`)
+    console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Message: ${message.toString()}`)
 })
 // ======================= WaBot Listen on Event
 
@@ -110,7 +110,7 @@ client.on('message_revoke_everyone', async (after, before) => {
     // Fired whenever a message is deleted by anyone (including you)
     // console.log(after); // message after it was deleted.
     if (before) {
-        console.log(`[ ${moment().format('HH:mm:ss')} ] Revoked: ${before.body}`); // message before it was deleted.
+        console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Revoked: ${before.body}`); // message before it was deleted.
     }
 });
 
@@ -160,10 +160,10 @@ client.on('disconnected', (reason) => {
 
 client.on('message', async msg => {
     msg.body = msg.body.toLowerCase()
-    msg.from.includes('@c.us') ? console.log(`[ ${moment().format('HH:mm:ss')} ] Message:`, msg.from.replace('@c.us', ''), `| ${msg.type}`, msg.body ? `| ${msg.body}` : '') : ''
-    msg.from.includes('@g.us') ? console.log(`[ ${moment().format('HH:mm:ss')} ] Message:`, msg.from.replace('@g.us', ''), `| ${msg.type}`, msg.body ? `| ${msg.body}` : '') : ''
+    msg.from.includes('@c.us') ? console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Message:`, msg.from.replace('@c.us', ''), `| ${msg.type}`, msg.body ? `| ${msg.body}` : '') : ''
+    msg.from.includes('@g.us') ? console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Message:`, msg.from.replace('@g.us', ''), `| ${msg.type}`, msg.body ? `| ${msg.body}` : '') : ''
 
-    if (msg.type == 'ciphertext' || msg.body == 'menu' || msg.body == 'info' || msg.body == 'corona' ) {
+    if (msg.type == 'ciphertext' || msg.body == 'menu' || msg.body == 'info' || msg.body == 'corona' || msg.body == 'help') {
         let chat = await msg.getChat();
         if (!chat.isGroup) {
             msg.reply('kirim !menu atau !help untuk melihat menu honk!.');
@@ -172,8 +172,10 @@ client.on('message', async msg => {
 
     } else if (msg.body == 'halo' || msg.body == 'hai' || msg.body == 'hallo') {
         // Send a new message as a reply to the current one
+        let chat = await msg.getChat();
+        if (!chat.isGroup) {
         msg.reply('hi 😃');
-
+        }
     } else if (msg.body == '!msg') {
         // Send a new message as a reply to the current one
         var kontak = await await msg.getContact();
@@ -227,8 +229,9 @@ kenalin aku Honk! 🤖 robot yang akan memberitahumu informasi mengenai COVID-19
 !aktif  =>  Mengaktifkan notifikasi
 !mati  =>  Mematikan notifikasi
 
-!peta => Peta Sebaran Kasus COVID-19
-!sumber => Sumber data
+!data => Data Pengawasan Kasus COVID-19
+!peta => Peta Pengawasan Kasus COVID-19
+!sumber => Sumber data Honk!
 
 
 Made with ♥️ by Yoga Sakti`);
@@ -236,14 +239,17 @@ Made with ♥️ by Yoga Sakti`);
     } else if (msg.body == '!sumber') {
         client.sendMessage(msg.from, `
 Sumber: 
-1. _https://kawalcovid19.id/_
-2. _https://kawalcorona.com/_
+1. _https://www.covid19.go.id/_
+2. _https://kawalcovid19.id/_
 3. _www.worldometers.info/coronavirus/_
-4. _https://covid19.mathdro.id/api/og_`);
+4. _https://indonesia-covid-19.mathdro.id/api/_`);
 
     } else if (msg.body == '!peta') {
         client.sendMessage(msg.from, `
 Daftar Peta Sebaran COVID-19 
+
+Peta Nasional
+- _https://www.covid19.go.id/situasi-virus-corona/_
 
 DKI Jakarta
 - _https://corona.jakarta.go.id/_
@@ -267,6 +273,16 @@ Riau
 - _https://corona.riau.go.id/_
 
 Jika ada peta provinsi lain tolong beritahukan 🙂
+`);
+    } else if (msg.body == '!data') {
+        client.sendMessage(msg.from, `
+Daftar Data Sebaran COVID-19 
+
+Data Nasional
+- _https://www.covid19.go.id/_
+
+Data Monitoring Kemenkes
+- _http://covid-monitoring.kemkes.go.id/_
 `);
     } else if (msg.body == '!localdata') {
         let localData = client.localData;
@@ -407,55 +423,57 @@ Jika ada peta provinsi lain tolong beritahukan 🙂
             const newDeaths = localData.NewDeaths === '' ? 0 : localData.NewDeaths;
             const NewRecovered = localData.NewRecovered === '' ? 0 : localData.NewRecovered;
             client.sendMessage(msg.from, `
-                    *COVID-19 Update!!*
-
+*COVID-19 Update!!*
 Negara: ${localData.Country}
+
 Total Kasus: ${localData.TotalCases}
-
-Total Kasus aktif: ${localData.ActiveCases}
 *Kasus Baru: ${newCases}*
+Total Pasien: ${localData.ActiveCases}
 
-Total Meninggal: ${localData.TotalDeaths}
-*Meninggal Baru: ${newDeaths}*
-
-Total Sembuh: ${localData.TotalRecovered}
+Pasien Sembuh: ${localData.TotalRecovered}
 *Sembuh Baru: ${NewRecovered}*
+Presentase Sembuh: ${localData.PresentaseRecovered}
 
-Dicek pada: ${localData.lastUpdate}
+Pasien Meninggal: ${localData.TotalDeaths}
+*Meninggal Baru: ${newDeaths}*
+Presentase Meninggal: ${localData.PresentaseDeath}
+
+Pembaruan Terakhir: 
+${localData.lastUpdate}
             `);
             var imageAsBase64 = fs.readFileSync('./CoronaService/corona.png', 'base64');
             var CoronaImage = new MessageMedia("image/png", imageAsBase64);
             client.sendMessage(msg.from, CoronaImage);
         })
 
-//     } else if (msg.body === '!coronaOld') {
-//         corona.getAll()
-//             .then(result => {
-//                 var aktifIndo = result[0].confirmed - result[0].recovered - result[0].deaths
-//                 // var aktifGlob = result[1].confirmed - result[1].recovered - result[1].
-//                 // Kasus *Global*
-//                 // Total Kasus: ${result[1].confirmed}
-//                 // Kasus aktif: ${aktifGlob}
-//                 // Sembuh: ${result[1].recovered}
-//                 // Meninggal: ${result[1].deaths}
-//                 // Update Pada: 
-//                 // ${result[1].lastUpdate}
-//                 client.sendMessage(msg.from, `
-//                     *COVID-19 Update!!*
+        //     } else if (msg.body === '!coronaOld') {
+        //         corona.getAll()
+        //             .then(result => {
+        //                 var aktifIndo = result[0].confirmed - result[0].recovered - result[0].deaths
+        //                 // var aktifGlob = result[1].confirmed - result[1].recovered - result[1].
+        //                 // Kasus *Global*
+        //                 // Total Kasus: ${result[1].confirmed}
+        //                 // Kasus aktif: ${aktifGlob}
+        //                 // Sembuh: ${result[1].recovered}
+        //                 // Meninggal: ${result[1].deaths}
+        //                 // Update Pada: 
+        //                 // ${result[1].lastUpdate}
+        //                 client.sendMessage(msg.from, `
+        //                     *COVID-19 Update!!*
 
-// Kasus *Indonesia*
-// Total Kasus: ${result[0].confirmed}
-// Kasus aktif: ${aktifIndo}
-// Sembuh: ${result[0].recovered}
-// Meninggal: ${result[0].deaths}
+        // Kasus *Indonesia*
+        // Total Kasus: ${result[0].confirmed}
+        // Kasus aktif: ${aktifIndo}
+        // Sembuh: ${result[0].recovered}
+        // Meninggal: ${result[0].deaths}
 
-// Update Pada: 
-// ${result[0].lastUpdate.replace("pukul","|")} WIB
-//         `);
-//                 var imageAsBase64 = fs.readFileSync('./CoronaService/corona.png', 'base64');
-//                 var CoronaImage = new MessageMedia("image/png", imageAsBase64);
-//                 client.sendMessage(msg.from, CoronaImage);
-//             })
+        // Update Pada: 
+        // ${result[0].lastUpdate.replace("pukul","|")} WIB
+        //         `);
+        //                 var imageAsBase64 = fs.readFileSync('./CoronaService/corona.png', 'base64');
+        //                 var CoronaImage = new MessageMedia("image/png", imageAsBase64);
+        //                 client.sendMessage(msg.from, CoronaImage);
+        //             })
 
         // ============================================= Groups
 
@@ -523,7 +541,7 @@ Dicek pada: ${localData.lastUpdate}
             for (var i = 0; i < userData.length; i++) {
                 let number = userData[i].user;
                 setTimeout(function () {
-                    // console.log(`[ ${moment().format('HH:mm:ss')} ] Send Broadcast to ${number}`)
+                    // console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Send Broadcast to ${number}`)
                     // client.sendMessage(number, `Maaf jika terjadi kesalahan data/double pengiriman, sedang ada perbaikan sistem.`);
 
                     // Delay 2 Sec
@@ -536,7 +554,7 @@ Dicek pada: ${localData.lastUpdate}
 });
 
 listen.on('message', (topic, message) => {
-    console.log(`[ ${moment().format('HH:mm:ss')} ] MQTT: ${message.toString()}`)
+    console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] MQTT: ${message.toString()}`)
     fs.readFile('./CoronaService/user.json', 'utf-8', function (err, data) {
         if (err) throw err
         const userData = JSON.parse(data)
@@ -544,7 +562,7 @@ listen.on('message', (topic, message) => {
             let number = userData[i].user;
             // number = number.includes('@c.us') ? number : `${number}@c.us`;
             setTimeout(function () {
-                console.log(`[ ${moment().format('HH:mm:ss')} ] Send Corona Update to ${number}`)
+                console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Send Corona Update to ${number}`)
                 if (message.toString() === 'New Update!') {
                     fs.readFile('./CoronaService/data.json', 'utf-8', function (err, data) {
                         if (err) throw err
@@ -553,20 +571,23 @@ listen.on('message', (topic, message) => {
                         const newDeaths = localData.NewDeaths === '' ? 0 : localData.NewDeaths;
                         const NewRecovered = localData.NewRecovered === '' ? 0 : localData.NewRecovered;
                         client.sendMessage(number, `
-                    *COVID-19 Update!!*
+*COVID-19 Update!!*
 Negara: ${localData.Country}
-Total Kasus: ${localData.TotalCases}
 
-Kasus aktif: ${localData.ActiveCases}
+Total Kasus: ${localData.TotalCases}
 *Kasus Baru: ${newCases}*
-        
-Meninggal: ${localData.TotalDeaths}
-*Meninggal Baru: ${newDeaths}*
-        
-Sembuh: ${localData.TotalRecovered}
+Total Pasien: ${localData.ActiveCases}
+
+Pasien Sembuh: ${localData.TotalRecovered}
 *Sembuh Baru: ${NewRecovered}*
+Presentase Sembuh: ${localData.PresentaseRecovered}
+
+Pasien Meninggal: ${localData.TotalDeaths}
+*Meninggal Baru: ${newDeaths}*
+Presentase Meninggal: ${localData.PresentaseDeath}
                     
-Dicek pada: ${localData.lastUpdate}
+Di Perbarui Pada: 
+${localData.lastUpdate}
 Sumber: 
 _www.worldometers.info/coronavirus/_
                     `);
@@ -574,7 +595,7 @@ _www.worldometers.info/coronavirus/_
                     })
                 }
                 // Delay 2 Sec
-            }, i * 1750)
+            }, i * 1500)
 
         }
 
