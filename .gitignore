@@ -8,3 +8,5 @@ CoronaService/user.json
 .env
 
 CoronaService/anu.js
+
+CoronaService/covid19.js
