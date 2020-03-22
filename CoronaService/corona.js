@@ -70,7 +70,7 @@ async.forever(
             })
             .then(x => new Promise(resolve => setTimeout(() => resolve(x), 600000))) // Delay for 10 minutes.
             .catch((err) => {
-                reject(err);
+                console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Error: ${err}`)
             })
 
     },
