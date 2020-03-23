@@ -40,7 +40,8 @@ async.forever(
                     var result = json.data
                     var resmin = result[result.length - 2]
                     result = result[result.length - 1]
-                    if (result.TotalCases == null && result.ActiveCases == null && result.TotalDeaths == null && result.TotalRecovered == null) {
+                    console.log(result)
+                    if (result.jumlahKasusKumulatif == null && result.jumlahpasiendalamperawatan == null && result.jumlahPasienMeninggal == null && result.jumlahPasienSembuh == null) {
                         console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] No Update on Data.json`)
                     } else {
                         fs.readFile('./CoronaService/data.json', 'utf-8', function (err, data) {
@@ -63,7 +64,7 @@ async.forever(
                                 fs.writeFile('./CoronaService/data.json', JSON.stringify(OnlineData), 'utf-8', function (err) {
                                     if (err) throw err
                                     console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] New Update on Data.json`)
-                                    // client.publish(process.env.MQTT_TOPIC, 'New Update!')
+                                    client.publish(process.env.MQTT_TOPIC, 'New Update!')
                                 })
                             } else {
                                 console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] No Update on Data.json`)
