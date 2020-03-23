@@ -207,10 +207,17 @@ client.on('message', async msg => {
 
     } else if (msg.body == '!chats') {
         const chats = await client.getChats();
+        const group = chats.filter(x => x.isGroup == true)  
+        const personalChat = chats.filter(x => x.isGroup == false)
+        //fs.writeFile('./CoronaService/chats.json', JSON.stringify(chats), 'utf-8', function (err) {if (err) throw err})
         fs.readFile('./CoronaService/user.json', 'utf-8', function (err, data) {
             if (err) throw err
             const userData = JSON.parse(data)
-            client.sendMessage(msg.from, `The bot has ${chats.length} chats open and ${userData.length} users.`);
+            client.sendMessage(msg.from, `The bot has...
+Chats open: ${chats.length} 
+Groups chats: ${group.length}
+Personal chats: ${personalChat.length}
+Notification User: ${userData.length}`);
         })
 
     } else if (msg.body == '!info' || msg.body == '!help' || msg.body == '!menu') {
@@ -229,8 +236,8 @@ kenalin aku Honk! 🤖 robot yang akan memberitahumu informasi mengenai COVID-19
 !aktif  =>  Mengaktifkan notifikasi
 !mati  =>  Mematikan notifikasi
 
-!data => Data Pengawasan Kasus COVID-19
-!peta => Peta Pengawasan Kasus COVID-19
+!data => Data Pengawasan COVID-19
+!peta => Peta Sebaran COVID-19 per prov.
 !sumber => Sumber data Honk!
 
 
@@ -246,10 +253,16 @@ Sumber:
 
     } else if (msg.body == '!peta') {
         client.sendMessage(msg.from, `
-Daftar Peta Sebaran COVID-19 
+Daftar Peta Sebaran COVID-19 per Provinsi
 
 Peta Nasional
 - _https://www.covid19.go.id/situasi-virus-corona/_
+
+Aceh
+- _https://covid19.acehprov.go.id/_
+
+Banten
+- _https://infocorona.bantenprov.go.id/_
 
 DKI Jakarta
 - _https://corona.jakarta.go.id/_
@@ -261,16 +274,28 @@ Jawa Tengah
 - _https://corona.jatengprov.go.id/_
 
 Jawa Timur
-- Tidak di-publish
+- _http://infocovid19.jatimprov.go.id/_
 
-Yogyakarta
-- _http://corona.jogjaprov.go.id/_
+Kalimantan Barat
+- _https://dinkes.kalbarprov.go.id/covid-19/_
 
-Banten
-- _https://infocorona.bantenprov.go.id/_
+Lampung:
+- _https://geoportal.lampungprov.go.id/corona/_
+
+NTB
+- _https://corona.ntbprov.go.id_
 
 Riau
 - _https://corona.riau.go.id/_
+
+Sumatera Barat
+- _https://corona.sumbarprov.go.id/_
+
+Sulawesi Selatan
+- _https://covid19.sulselprov.go.id/_
+
+Yogyakarta
+- _http://corona.jogjaprov.go.id/_
 
 Jika ada peta provinsi lain tolong beritahukan 🙂
 `);
@@ -589,7 +614,7 @@ Presentase Meninggal: ${localData.PresentaseDeath}
 Di Perbarui Pada: 
 ${localData.lastUpdate}
 Sumber: 
-_www.worldometers.info/coronavirus/_
+_https://www.covid19.go.id_
                     `);
 
                     })
