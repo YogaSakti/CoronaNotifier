@@ -209,7 +209,6 @@ client.on('message', async msg => {
         const chats = await client.getChats();
         const group = chats.filter(x => x.isGroup == true)  
         const personalChat = chats.filter(x => x.isGroup == false)
-        //fs.writeFile('./CoronaService/chats.json', JSON.stringify(chats), 'utf-8', function (err) {if (err) throw err})
         fs.readFile('./CoronaService/user.json', 'utf-8', function (err, data) {
             if (err) throw err
             const userData = JSON.parse(data)
@@ -221,8 +220,8 @@ Notification User: ${userData.length}`);
         })
 
     } else if (msg.body == '!info' || msg.body == '!help' || msg.body == '!menu') {
-        var contact = await await msg.getContact();
-        var nama = contact.pushname !== undefined ? `Hai, ${contact.pushname} 😃` : 'Hai 😃'
+        const contact = await await msg.getContact();
+        const nama = contact.pushname !== undefined ? `Hai, ${contact.pushname} 😃` : 'Hai 😃'
         client.sendMessage(msg.from, `
 ${nama}
 kenalin aku Honk! 🤖 robot yang akan memberitahumu informasi mengenai COVID-19 di indonesia.
@@ -466,42 +465,13 @@ Presentase Meninggal: ${localData.PresentaseDeath}
 Pembaruan Terakhir: 
 ${localData.lastUpdate}
             `);
-            var imageAsBase64 = fs.readFileSync('./CoronaService/corona.png', 'base64');
-            var CoronaImage = new MessageMedia("image/png", imageAsBase64);
+            const imageAsBase64 = fs.readFileSync('./CoronaService/corona.png', 'base64');
+            const CoronaImage = new MessageMedia("image/png", imageAsBase64);
             client.sendMessage(msg.from, CoronaImage);
+
+
+    // ============================================= Groups
         })
-
-        //     } else if (msg.body === '!coronaOld') {
-        //         corona.getAll()
-        //             .then(result => {
-        //                 var aktifIndo = result[0].confirmed - result[0].recovered - result[0].deaths
-        //                 // var aktifGlob = result[1].confirmed - result[1].recovered - result[1].
-        //                 // Kasus *Global*
-        //                 // Total Kasus: ${result[1].confirmed}
-        //                 // Kasus aktif: ${aktifGlob}
-        //                 // Sembuh: ${result[1].recovered}
-        //                 // Meninggal: ${result[1].deaths}
-        //                 // Update Pada: 
-        //                 // ${result[1].lastUpdate}
-        //                 client.sendMessage(msg.from, `
-        //                     *COVID-19 Update!!*
-
-        // Kasus *Indonesia*
-        // Total Kasus: ${result[0].confirmed}
-        // Kasus aktif: ${aktifIndo}
-        // Sembuh: ${result[0].recovered}
-        // Meninggal: ${result[0].deaths}
-
-        // Update Pada: 
-        // ${result[0].lastUpdate.replace("pukul","|")} WIB
-        //         `);
-        //                 var imageAsBase64 = fs.readFileSync('./CoronaService/corona.png', 'base64');
-        //                 var CoronaImage = new MessageMedia("image/png", imageAsBase64);
-        //                 client.sendMessage(msg.from, CoronaImage);
-        //             })
-
-        // ============================================= Groups
-
     } else if (msg.body.startsWith('!subject ')) {
         // Change the group subject
         let chat = await msg.getChat();
@@ -566,9 +536,8 @@ ${localData.lastUpdate}
             for (var i = 0; i < userData.length; i++) {
                 let number = userData[i].user;
                 setTimeout(function () {
-                    // console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Send Broadcast to ${number}`)
+                    console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Send Broadcast to ${number}`)
                     // client.sendMessage(number, `Maaf jika terjadi kesalahan data/double pengiriman, sedang ada perbaikan sistem.`);
-
                     // Delay 2 Sec
                 }, i * 2000)
 
@@ -588,7 +557,7 @@ listen.on('message', (topic, message) => {
             // number = number.includes('@c.us') ? number : `${number}@c.us`;
             setTimeout(function () {
                 console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Send Corona Update to ${number}`)
-                if (message.toString() === 'New Update!') {
+                if (message.toString() == 'New Update!') {
                     fs.readFile('./CoronaService/data.json', 'utf-8', function (err, data) {
                         if (err) throw err
                         const localData = JSON.parse(data)

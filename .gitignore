@@ -3,12 +3,10 @@ node_modules/
 
 session.json
 
-CoronaService/user.json
-
-.env
-
 CoronaService/anu.js
 
 CoronaService/covid19.js
 
 CoronaService/chats.json
+
+CoronaService/user.json
