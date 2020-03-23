@@ -1,11 +1,11 @@
 require('dotenv').config()
-const async = require('async');
-const fs = require('fs');
-const moment = require('moment-timezone');
-const fetch = require('node-fetch');
+const { forever } = require('async')
+const { createWriteStream, readFile, writeFile } = require('fs')
+const moment = require('moment-timezone')
+const fetch = require('node-fetch')
 const mqtt = require('mqtt')
 const client = mqtt.connect('mqtt://test.mosquitto.org')
-moment.locale('id');
+moment.locale('id')
 
 console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Start checking data on API...`)
 
@@ -17,24 +17,24 @@ client.on('connect', () => {
     })
 })
 
-async function GetImage(url, path) {
-    const res = await fetch(url);
-    const fileStream = fs.createWriteStream(path);
+async function GetImage (url, path) {
+    const res = await fetch(url)
+    const fileStream = createWriteStream(path)
     await new Promise((resolve, reject) => {
-        res.body.pipe(fileStream);
-        res.body.on("error", (err) => {
-            reject(err);
-        });
-        fileStream.on("finish", function () {
-            resolve();
-        });
-    });
+        res.body.pipe(fileStream)
+        res.body.on('error', (err) => {
+            reject(err)
+        })
+        fileStream.on('finish', function () {
+            resolve()
+        })
+    })
 };
 
-async.forever(
+forever(
     async function () {
             GetImage('https://covid19.mathdro.id/api/og?width=1024&height=1024', './CoronaService/corona.png')
-            await fetch(`https://indonesia-covid-19.mathdro.id/api/harian`)
+            await fetch('https://indonesia-covid-19.mathdro.id/api/harian')
                 .then(response => response.json())
                 .then(json => {
                     var result = json.data
@@ -44,7 +44,7 @@ async.forever(
                     if (result.jumlahKasusKumulatif == null && result.jumlahpasiendalamperawatan == null && result.jumlahPasienMeninggal == null && result.jumlahPasienSembuh == null) {
                         console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] No Update on Data.json`)
                     } else {
-                        fs.readFile('./CoronaService/data.json', 'utf-8', function (err, data) {
+                        readFile('./CoronaService/data.json', 'utf-8', function (err, data) {
                             if (err) throw err
                             const localData = JSON.parse(data)
                             const OnlineData = {
@@ -57,18 +57,17 @@ async.forever(
                                 TotalRecovered: result.jumlahPasienSembuh,
                                 NewRecovered: result.jumlahPasienSembuh - resmin.jumlahPasienSembuh < 0 ? '+0' : `+${result.jumlahPasienSembuh - resmin.jumlahPasienSembuh}`,
                                 PresentaseRecovered: `${(result.jumlahPasienSembuh / result.jumlahKasusKumulatif * 100).toFixed(2)}%`,
-                                PresentaseDeath: `${(result.jumlahPasienMeninggal / result.jumlahKasusKumulatif *100).toFixed(2)}%`,
-                                lastUpdate: `${moment().tz('Asia/Jakarta').format('LLLL').replace("pukul","|")} WIB`
+                                PresentaseDeath: `${(result.jumlahPasienMeninggal / result.jumlahKasusKumulatif * 100).toFixed(2)}%`,
+                                lastUpdate: `${moment().tz('Asia/Jakarta').format('LLLL').replace('pukul', '|')} WIB`
                             }
                             if (OnlineData.TotalCases !== localData.TotalCases || OnlineData.TotalDeaths !== localData.TotalDeaths || OnlineData.TotalRecovered !== localData.TotalRecovered || OnlineData.ActiveCases !== localData.ActiveCases) {
-                                fs.writeFile('./CoronaService/data.json', JSON.stringify(OnlineData), 'utf-8', function (err) {
+                                writeFile('./CoronaService/data.json', JSON.stringify(OnlineData), 'utf-8', function (err) {
                                     if (err) throw err
                                     console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] New Update on Data.json`)
                                     client.publish(process.env.MQTT_TOPIC, 'New Update!')
                                 })
                             } else {
                                 console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] No Update on Data.json`)
-
                             }
                         })
                     }
@@ -77,8 +76,7 @@ async.forever(
                 .catch((err) => {
                     console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Error: ${err}`)
                 })
-
         },
         function (err) {
             console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Error: ${err}`)
-        });
+        })

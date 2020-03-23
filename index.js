@@ -1,21 +1,26 @@
 require('dotenv').config()
-const fs = require('fs');
-const moment = require('moment-timezone');
-const qrcode = require('qrcode-terminal');
+const {
+    readFile,
+    writeFile,
+    existsSync,
+    readFileSync,
+    unlink
+} = require('fs')
 const {
     Client,
     Location,
     MessageMedia
-} = require('whatsapp-web.js');
+} = require('whatsapp-web.js')
+const moment = require('moment-timezone')
+const qrcode = require('qrcode-terminal')
 const mqtt = require('mqtt')
 const listen = mqtt.connect('mqtt://test.mosquitto.org')
-const User = require('./user.js')
-// const corona = require('./CoronaService/covid19.js')
+const User = require('./user/user.js')
 
-const SESSION_FILE_PATH = './session.json';
-let sessionCfg;
-if (fs.existsSync(SESSION_FILE_PATH)) {
-    sessionCfg = require(SESSION_FILE_PATH);
+const SESSION_FILE_PATH = './session.json'
+let sessionCfg
+if (existsSync(SESSION_FILE_PATH)) {
+    sessionCfg = require(SESSION_FILE_PATH)
 }
 
 const client = new Client({
@@ -44,10 +49,10 @@ const client = new Client({
         ]
     },
     session: sessionCfg
-});
+})
 // You can use an existing session and avoid scanning a QR code by adding a "session" object to the client options.
 
-client.initialize();
+client.initialize()
 
 // ======================= Begin initialize WAbot
 
@@ -55,34 +60,34 @@ client.on('qr', (qr) => {
     // NOTE: This event will not be fired if a session is specified.
     qrcode.generate(qr, {
         small: true
-    });
+    })
     console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Please Scan QR with app!`)
-});
+})
 
 client.on('authenticated', (session) => {
     console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Authenticated Success!`)
     // console.log(session);
-    sessionCfg = session;
-    fs.writeFile(SESSION_FILE_PATH, JSON.stringify(session), function (err) {
+    sessionCfg = session
+    writeFile(SESSION_FILE_PATH, JSON.stringify(session), function (err) {
         if (err) {
-            console.error(err);
+            console.error(err)
         }
-    });
-});
+    })
+})
 
 client.on('auth_failure', msg => {
     // Fired if session restore was unsuccessfull
     console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] AUTHENTICATION FAILURE \n ${msg}`)
-    fs.unlink('./session.json', function (err) {
-        if (err) return console.log(err);
+    unlink('./session.json', function (err) {
+        if (err) return console.log(err)
         console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Session Deleted, Please Restart!`)
-        process.exit(1);
-    });
-});
+        process.exit(1)
+    })
+})
 
 client.on('ready', () => {
     console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Whatsapp bot ready!`)
-});
+})
 
 // ======================= Begin initialize mqtt broker
 
@@ -104,59 +109,59 @@ client.on('message_create', (msg) => {
     if (msg.fromMe) {
         // do stuff here
     }
-});
+})
 
-client.on('message_revoke_everyone', async (after, before) => {
+client.on('message_revoke_everyone', async (before) => {
     // Fired whenever a message is deleted by anyone (including you)
     // console.log(after); // message after it was deleted.
     if (before) {
-        console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Revoked: ${before.body}`); // message before it was deleted.
+        console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Revoked: ${before.body}`) // message before it was deleted.
     }
-});
+})
 
 client.on('message_revoke_me', async (msg) => {
     // Fired whenever a message is only deleted in your own view.
     // console.log(msg.body); // message before it was deleted.
-});
+})
 
 client.on('message_ack', (msg, ack) => {
     /*
-        == ACK VALUES ==
-        ACK_ERROR: -1
-        ACK_PENDING: 0
-        ACK_SERVER: 1
-        ACK_DEVICE: 2
-        ACK_READ: 3
-        ACK_PLAYED: 4
-    */
+          == ACK VALUES ==
+          ACK_ERROR: -1
+          ACK_PENDING: 0
+          ACK_SERVER: 1
+          ACK_DEVICE: 2
+          ACK_READ: 3
+          ACK_PLAYED: 4
+      */
 
     if (ack == 3) {
         // The message was read
     }
-});
+})
 
 client.on('group_join', (notification) => {
     // User has joined or been added to the group.
-    console.log('join', notification);
-    notification.reply('User joined.');
-});
+    console.log('join', notification)
+    notification.reply('User joined.')
+})
 
 client.on('group_leave', (notification) => {
     // User has left or been kicked from the group.
-    console.log('leave', notification);
-    notification.reply('User left.');
-});
+    console.log('leave', notification)
+    notification.reply('User left.')
+})
 
 client.on('group_update', (notification) => {
     // Group picture, subject or description has been updated.
-    console.log('update', notification);
-});
+    console.log('update', notification)
+})
 
 client.on('disconnected', (reason) => {
-    console.log('Client was logged out', reason);
-});
+    console.log('Client was logged out', reason)
+})
 
-// ======================= WaBot Listen on message 
+// ======================= WaBot Listen on message
 
 client.on('message', async msg => {
     msg.body = msg.body.toLowerCase()
@@ -164,63 +169,57 @@ client.on('message', async msg => {
     msg.from.includes('@g.us') ? console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Message:`, msg.from.replace('@g.us', ''), `| ${msg.type}`, msg.body ? `| ${msg.body}` : '') : ''
 
     if (msg.type == 'ciphertext' || msg.body == 'menu' || msg.body == 'info' || msg.body == 'corona' || msg.body == 'help') {
-        let chat = await msg.getChat();
+        const chat = await msg.getChat()
         if (!chat.isGroup) {
-            msg.reply('kirim !menu atau !help untuk melihat menu honk!.');
+            msg.reply('kirim !menu atau !help untuk melihat menu honk!.')
         }
         // Send a new message as a reply to the current one
-
     } else if (msg.body == 'halo' || msg.body == 'hai' || msg.body == 'hallo') {
         // Send a new message as a reply to the current one
-        let chat = await msg.getChat();
+        const chat = await msg.getChat()
         if (!chat.isGroup) {
-        msg.reply('hi 😃');
+            msg.reply('hi 😃')
         }
     } else if (msg.body == '!msg') {
         // Send a new message as a reply to the current one
-        var kontak = await await msg.getContact();
+        var kontak = await await msg.getContact()
         console.log(kontak)
         console.log(msg)
-
     } else if (msg.body == '!ping' || msg.body == 'ping' || msg.body == 'p') {
         // Send a new message to the same chat
-        client.sendMessage(msg.from, 'pong');
-
+        client.sendMessage(msg.from, 'pong')
     } else if (msg.body == '!honk' || msg.body == 'honk!' || msg.body == 'honk') {
         // Send a new message to the same chat
-        client.sendMessage(msg.from, 'Honk Honk!!');
-
+        client.sendMessage(msg.from, 'Honk Honk!!')
     } else if (msg.body.startsWith('!sendto ')) {
         // Direct send a new message to specific id
-        let number = msg.body.split(' ')[1];
-        let messageIndex = msg.body.indexOf(number) + number.length;
-        let message = msg.body.slice(messageIndex, msg.body.length);
+        let number = msg.body.split(' ')[1]
+        const messageIndex = msg.body.indexOf(number) + number.length
+        const message = msg.body.slice(messageIndex, msg.body.length)
         if (number.includes('@g.us')) {
-            let group = await client.getChatById(number);
+            const group = await client.getChatById(number)
             group.sendMessage(message)
         } else if (!number.includes('@c.us') && !number.includes('@g.us')) {
-            number = number.includes('@c.us') ? number : `${number}@c.us`;
-            let chat = await msg.getChat();
-            chat.sendSeen();
-            client.sendMessage(number, message);
+            number = number.includes('@c.us') ? number : `${number}@c.us`
+            const chat = await msg.getChat()
+            chat.sendSeen()
+            client.sendMessage(number, message)
         }
-
     } else if (msg.body == '!chats') {
-        const chats = await client.getChats();
-        const group = chats.filter(x => x.isGroup == true)  
+        const chats = await client.getChats()
+        const group = chats.filter(x => x.isGroup == true)
         const personalChat = chats.filter(x => x.isGroup == false)
-        fs.readFile('./CoronaService/user.json', 'utf-8', function (err, data) {
+        readFile('./user/user.json', 'utf-8', function (err, data) {
             if (err) throw err
             const userData = JSON.parse(data)
             client.sendMessage(msg.from, `The bot has...
 Chats open: ${chats.length} 
 Groups chats: ${group.length}
 Personal chats: ${personalChat.length}
-Notification User: ${userData.length}`);
+Notification User: ${userData.length}`)
         })
-
     } else if (msg.body == '!info' || msg.body == '!help' || msg.body == '!menu') {
-        const contact = await await msg.getContact();
+        const contact = await await msg.getContact()
         const nama = contact.pushname !== undefined ? `Hai, ${contact.pushname} 😃` : 'Hai 😃'
         client.sendMessage(msg.from, `
 ${nama}
@@ -240,16 +239,13 @@ kenalin aku Honk! 🤖 robot yang akan memberitahumu informasi mengenai COVID-19
 !sumber => Sumber data Honk!
 
 
-Made with ♥️ by Yoga Sakti`);
-
+Made with ♥️ by Yoga Sakti`)
     } else if (msg.body == '!sumber') {
         client.sendMessage(msg.from, `
 Sumber: 
 1. _https://www.covid19.go.id/_
-2. _https://kawalcovid19.id/_
-3. _www.worldometers.info/coronavirus/_
-4. _https://indonesia-covid-19.mathdro.id/api/_`);
-
+2. _https://indonesia-covid-19.mathdro.id/api/_
+3. _https://kawalcovid19.id/_`)
     } else if (msg.body == '!peta') {
         client.sendMessage(msg.from, `
 Daftar Peta Sebaran COVID-19 per Provinsi
@@ -297,20 +293,17 @@ Yogyakarta
 - _http://corona.jogjaprov.go.id/_
 
 Jika ada peta provinsi lain tolong beritahukan 🙂
-`);
+`)
     } else if (msg.body == '!data') {
         client.sendMessage(msg.from, `
 Daftar Data Sebaran COVID-19 
 
 Data Nasional
 - _https://www.covid19.go.id/_
-
-Data Monitoring Kemenkes
-- _http://covid-monitoring.kemkes.go.id/_
-`);
+`)
     } else if (msg.body == '!localdata') {
-        let localData = client.localData;
-        console.log(localData);
+        const localData = client.localData
+        console.log(localData)
         client.sendMessage(msg.from, `
             *Connection localData*
             User name: ${localData.pushname}
@@ -318,20 +311,18 @@ Data Monitoring Kemenkes
             Device: ${localData.phone.device_manufacturer} | ${localData.phone.device_model}
             Platform: ${localData.platform} ${localData.phone.os_version} 
             WhatsApp version: ${localData.phone.wa_version}
-        `);
-
+        `)
     } else if (msg.body == '!medialocaldata' && msg.hasMedia) {
-        const attachmentData = await msg.downloadMedia();
+        const attachmentData = await msg.downloadMedia()
         // console.log(attachmentData)
         msg.reply(`
             *Media localData*
             MimeType: ${attachmentData.mimetype}
             Filename: ${attachmentData.filename}
             Data (length): ${attachmentData.data.length}
-        `);
-
+        `)
     } else if (msg.body == '!quotelocaldata' && msg.hasQuotedMsg) {
-        const quotedMsg = await msg.getQuotedMessage();
+        const quotedMsg = await msg.getQuotedMessage()
 
         quotedMsg.reply(`
             ID: ${quotedMsg.id._serialized}
@@ -339,63 +330,53 @@ Data Monitoring Kemenkes
             Author: ${quotedMsg.author || quotedMsg.from}
             Timestamp: ${quotedMsg.timestamp}
             Has Media? ${quotedMsg.hasMedia}
-        `);
-
+        `)
     } else if (msg.body == '!resendmedia' && msg.hasQuotedMsg) {
-        const quotedMsg = await msg.getQuotedMessage();
+        const quotedMsg = await msg.getQuotedMessage()
         if (quotedMsg.hasMedia) {
-            const attachmentData = await quotedMsg.downloadMedia();
+            const attachmentData = await quotedMsg.downloadMedia()
             client.sendMessage(msg.from, attachmentData, {
                 caption: 'Here\'s your requested media.'
-            });
+            })
         }
-
     } else if (msg.body == '!location') {
-        msg.reply(new Location(37.422, -122.084, 'Googleplex\nGoogle Headquarters'));
-
+        msg.reply(new Location(37.422, -122.084, 'Googleplex\nGoogle Headquarters'))
     } else if (msg.body.startsWith('!status ')) {
-        const newStatus = msg.body.split(' ')[1];
-        await client.setStatus(newStatus);
-        msg.reply(`Status was updated to *${newStatus}*`);
-
+        const newStatus = msg.body.split(' ')[1]
+        await client.setStatus(newStatus)
+        msg.reply(`Status was updated to *${newStatus}*`)
     } else if (msg.body == '!mention') {
-        const contact = await msg.getContact();
-        const chat = await msg.getChat();
+        const contact = await msg.getContact()
+        const chat = await msg.getChat()
         chat.sendMessage(`Hi @${contact.number}!`, {
             mentions: [contact]
-        });
-
+        })
     } else if (msg.body == '!delete' && msg.hasQuotedMsg) {
-        const quotedMsg = await msg.getQuotedMessage();
+        const quotedMsg = await msg.getQuotedMessage()
         if (quotedMsg.fromMe) {
-            quotedMsg.delete(true);
+            quotedMsg.delete(true)
         } else {
-            msg.reply('I can only delete my own messages');
+            msg.reply('I can only delete my own messages')
         }
-
     } else if (msg.body === '!archive') {
-        const chat = await msg.getChat();
-        chat.archive();
-
+        const chat = await msg.getChat()
+        chat.archive()
     } else if (msg.body === '!typing') {
-        const chat = await msg.getChat();
+        const chat = await msg.getChat()
         // simulates typing in the chat
-        chat.sendStateTyping();
-
+        chat.sendStateTyping()
     } else if (msg.body === '!recording') {
-        const chat = await msg.getChat();
+        const chat = await msg.getChat()
         // simulates recording audio in the chat
-        chat.sendStateRecording();
-
+        chat.sendStateRecording()
     } else if (msg.body === '!clearstate') {
-        const chat = await msg.getChat();
+        const chat = await msg.getChat()
         // stops typing or recording in the chat
-        chat.clearState();
-
+        chat.clearState()
     } else if (msg.body === '!mati') {
-        let chat = await msg.getChat();
+        const chat = await msg.getChat()
         if (chat.isGroup) {
-            msg.reply('Maaf, perintah ini tidak bisa digunakan di dalam grup! silahkan kirim !aktif di personal chat untuk mengaktifkan notifikasi.');
+            msg.reply('Maaf, perintah ini tidak bisa digunakan di dalam grup! silahkan kirim !aktif di personal chat untuk mengaktifkan notifikasi.')
         } else {
             User.checkUser(msg.from).then(result => {
                 if (result) {
@@ -404,48 +385,45 @@ Data Monitoring Kemenkes
                             if (result) {
                                 client.sendMessage(msg.from,
                                     'Berhasil menonaktifkan, anda tidak akan mendapat notifikasi lagi.'
-                                );
+                                )
                             } else {
                                 client.sendMessage(msg.from,
                                     'Gagal menonaktifkan, nomor tidak terdaftar.'
-                                );
+                                )
                             }
                         })
                 } else {
                     client.sendMessage(msg.from,
                         'Gagal menonaktifkan, nomor tidak terdaftar.'
-                    );
+                    )
                 }
             })
         }
-
-
     } else if (msg.body === '!aktif' || msg.body === '!daftar') {
-        let chat = await msg.getChat();
+        const chat = await msg.getChat()
         if (chat.isGroup) {
-            msg.reply('Maaf, perintah ini tidak bisa digunakan di dalam grup! silahkan kirim !aktif di personal chat untuk mengaktifkan notifikasi.');
+            msg.reply('Maaf, perintah ini tidak bisa digunakan di dalam grup! silahkan kirim !aktif di personal chat untuk mengaktifkan notifikasi.')
         } else {
             User.addUser(msg.from)
                 .then(result => {
                     if (!result) {
                         client.sendMessage(msg.from,
                             'Notifikasi sudah aktif.'
-                        );
+                        )
                     } else {
                         client.sendMessage(msg.from,
                             'Berhasil mengaktifkan notifikasi, anda akan mendapat notifikasi ketika ada permbaruan data.'
-                        );
+                        )
                     }
                 })
         }
-
     } else if (msg.body === '!corona' || msg.body === '!covid') {
-        fs.readFile('./CoronaService/data.json', 'utf-8', function (err, data) {
+        readFile('./CoronaService/data.json', 'utf-8', function (err, data) {
             if (err) throw err
             const localData = JSON.parse(data)
-            const newCases = localData.NewCases === '' ? 0 : localData.NewCases;
-            const newDeaths = localData.NewDeaths === '' ? 0 : localData.NewDeaths;
-            const NewRecovered = localData.NewRecovered === '' ? 0 : localData.NewRecovered;
+            const newCases = localData.NewCases === '' ? 0 : localData.NewCases
+            const newDeaths = localData.NewDeaths === '' ? 0 : localData.NewDeaths
+            const NewRecovered = localData.NewRecovered === '' ? 0 : localData.NewRecovered
             client.sendMessage(msg.from, `
 *COVID-19 Update!!*
 Negara: ${localData.Country}
@@ -464,58 +442,52 @@ Presentase Meninggal: ${localData.PresentaseDeath}
 
 Pembaruan Terakhir: 
 ${localData.lastUpdate}
-            `);
-            const imageAsBase64 = fs.readFileSync('./CoronaService/corona.png', 'base64');
-            const CoronaImage = new MessageMedia("image/png", imageAsBase64);
-            client.sendMessage(msg.from, CoronaImage);
+            `)
+            const imageAsBase64 = readFileSync('./CoronaService/corona.png', 'base64')
+            const CoronaImage = new MessageMedia('image/png', imageAsBase64)
+            client.sendMessage(msg.from, CoronaImage)
 
-
-    // ============================================= Groups
+            // ============================================= Groups
         })
     } else if (msg.body.startsWith('!subject ')) {
         // Change the group subject
-        let chat = await msg.getChat();
+        const chat = await msg.getChat()
         if (chat.isGroup) {
-            let newSubject = msg.body.slice(9);
-            chat.setSubject(newSubject);
+            const newSubject = msg.body.slice(9)
+            chat.setSubject(newSubject)
         } else {
-            msg.reply('This command can only be used in a group!');
+            msg.reply('This command can only be used in a group!')
         }
-
     } else if (msg.body.startsWith('!echo ')) {
         // Replies with the same message
-        msg.reply(msg.body.slice(6));
-
+        msg.reply(msg.body.slice(6))
     } else if (msg.body.startsWith('!desc ')) {
         // Change the group description
-        let chat = await msg.getChat();
+        const chat = await msg.getChat()
         if (chat.isGroup) {
-            let newDescription = msg.body.slice(6);
-            chat.setDescription(newDescription);
+            const newDescription = msg.body.slice(6)
+            chat.setDescription(newDescription)
         } else {
-            msg.reply('This command can only be used in a group!');
+            msg.reply('This command can only be used in a group!')
         }
-
     } else if (msg.body == '!leave') {
         // Leave the group
-        let chat = await msg.getChat();
+        const chat = await msg.getChat()
         if (chat.isGroup) {
-            chat.leave();
+            chat.leave()
         } else {
-            msg.reply('This command can only be used in a group!');
+            msg.reply('This command can only be used in a group!')
         }
-
     } else if (msg.body.startsWith('!join ')) {
-        const inviteCode = msg.body.split(' ')[1];
+        const inviteCode = msg.body.split(' ')[1]
         try {
-            await client.acceptInvite(inviteCode);
-            msg.reply('Joined the group!');
+            await client.acceptInvite(inviteCode)
+            msg.reply('Joined the group!')
         } catch (e) {
-            msg.reply('That invite code seems to be invalid.');
+            msg.reply('That invite code seems to be invalid.')
         }
-
     } else if (msg.body == '!grouplocaldata') {
-        let chat = await msg.getChat();
+        const chat = await msg.getChat()
         if (chat.isGroup) {
             msg.reply(`
                 *Group Details*
@@ -524,46 +496,43 @@ ${localData.lastUpdate}
                 Created At: ${chat.createdAt.toString()}
                 Created By: ${chat.owner.user}
                 Participant count: ${chat.participants.length}
-            `);
+            `)
         } else {
-            msg.reply('This command can only be used in a group!');
+            msg.reply('This command can only be used in a group!')
         }
-
     } else if (msg.body == '!broadcast' && msg.from == '6282324937376@c.us') {
-        fs.readFile('./CoronaService/user.json', 'utf-8', function (err, data) {
+        readFile('./user/user.json', 'utf-8', function (err, data) {
             if (err) throw err
             const userData = JSON.parse(data)
             for (var i = 0; i < userData.length; i++) {
-                let number = userData[i].user;
+                const number = userData[i].user
                 setTimeout(function () {
                     console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Send Broadcast to ${number}`)
                     // client.sendMessage(number, `Maaf jika terjadi kesalahan data/double pengiriman, sedang ada perbaikan sistem.`);
                     // Delay 2 Sec
                 }, i * 2000)
-
             }
-
         })
     }
-});
+})
 
 listen.on('message', (topic, message) => {
     console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] MQTT: ${message.toString()}`)
-    fs.readFile('./CoronaService/user.json', 'utf-8', function (err, data) {
+    readFile('./user/user.json', 'utf-8', function (err, data) {
         if (err) throw err
         const userData = JSON.parse(data)
         for (var i = 0; i < userData.length; i++) {
-            let number = userData[i].user;
+            const number = userData[i].user
             // number = number.includes('@c.us') ? number : `${number}@c.us`;
             setTimeout(function () {
                 console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Send Corona Update to ${number}`)
                 if (message.toString() == 'New Update!') {
-                    fs.readFile('./CoronaService/data.json', 'utf-8', function (err, data) {
+                    readFile('./CoronaService/data.json', 'utf-8', function (err, data) {
                         if (err) throw err
                         const localData = JSON.parse(data)
-                        const newCases = localData.NewCases === '' ? 0 : localData.NewCases;
-                        const newDeaths = localData.NewDeaths === '' ? 0 : localData.NewDeaths;
-                        const NewRecovered = localData.NewRecovered === '' ? 0 : localData.NewRecovered;
+                        const newCases = localData.NewCases === '' ? 0 : localData.NewCases
+                        const newDeaths = localData.NewDeaths === '' ? 0 : localData.NewDeaths
+                        const NewRecovered = localData.NewRecovered === '' ? 0 : localData.NewRecovered
                         client.sendMessage(number, `
 *COVID-19 Update!!*
 Negara: ${localData.Country}
@@ -584,16 +553,11 @@ Di Perbarui Pada:
 ${localData.lastUpdate}
 Sumber: 
 _https://www.covid19.go.id_
-                    `);
-
+                    `)
                     })
                 }
                 // Delay 2 Sec
             }, i * 1500)
-
         }
-
     })
-
-
 })
