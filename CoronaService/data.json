@@ -1,13 +1,13 @@
 {
     "Country": "Indonesia",
-    "TotalCases": 579,
-    "NewCases": "+65",
-    "ActiveCases": 500,
-    "TotalDeaths": 49,
-    "NewDeaths": "+1",
-    "TotalRecovered": 30,
+    "TotalCases": 790,
+    "NewCases": "+105",
+    "ActiveCases": 701,
+    "TotalDeaths": 58,
+    "NewDeaths": "+3",
+    "TotalRecovered": 31,
     "NewRecovered": "+1",
-    "PresentaseRecovered": "5.18%",
-    "PresentaseDeath": "8.46%",
-    "lastUpdate": "Senin, 23 Maret 2020 | 16.23 WIB"
+    "PresentaseRecovered": "3.92%",
+    "PresentaseDeath": "7.34%",
+    "lastUpdate": "Rabu, 25 Maret 2020 | 15.37 WIB"
 }

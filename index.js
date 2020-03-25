@@ -14,8 +14,9 @@ const {
 const moment = require('moment-timezone')
 const qrcode = require('qrcode-terminal')
 const mqtt = require('mqtt')
-const listen = mqtt.connect('mqtt://test.mosquitto.org')
+const listen = mqtt.connect(process.env.MQTT_URL)
 const User = require('./user/user.js')
+const { getBandung } = require('./coronaService/fetcher')
 
 const SESSION_FILE_PATH = './session.json'
 let sessionCfg
@@ -173,26 +174,20 @@ client.on('message', async msg => {
         if (!chat.isGroup) {
             msg.reply('kirim !menu atau !help untuk melihat menu honk!.')
         }
-        // Send a new message as a reply to the current one
     } else if (msg.body == 'halo' || msg.body == 'hai' || msg.body == 'hallo') {
-        // Send a new message as a reply to the current one
         const chat = await msg.getChat()
         if (!chat.isGroup) {
             msg.reply('hi 😃')
         }
     } else if (msg.body == '!msg') {
-        // Send a new message as a reply to the current one
         var kontak = await await msg.getContact()
         console.log(kontak)
         console.log(msg)
     } else if (msg.body == '!ping' || msg.body == 'ping' || msg.body == 'p') {
-        // Send a new message to the same chat
         client.sendMessage(msg.from, 'pong')
     } else if (msg.body == '!honk' || msg.body == 'honk!' || msg.body == 'honk') {
-        // Send a new message to the same chat
         client.sendMessage(msg.from, 'Honk Honk!!')
     } else if (msg.body.startsWith('!sendto ')) {
-        // Direct send a new message to specific id
         let number = msg.body.split(' ')[1]
         const messageIndex = msg.body.indexOf(number) + number.length
         const message = msg.body.slice(messageIndex, msg.body.length)
@@ -301,44 +296,31 @@ Daftar Data Sebaran COVID-19
 Data Nasional
 - _https://www.covid19.go.id/_
 `)
-    } else if (msg.body == '!localdata') {
-        const localData = client.localData
-        console.log(localData)
+    } else if (msg.body == '!bandung') {
+        const parsedData = await getBandung()
         client.sendMessage(msg.from, `
-            *Connection localData*
-            User name: ${localData.pushname}
-            My number: ${localData.me.user}
-            Device: ${localData.phone.device_manufacturer} | ${localData.phone.device_model}
-            Platform: ${localData.platform} ${localData.phone.os_version} 
-            WhatsApp version: ${localData.phone.wa_version}
-        `)
-    } else if (msg.body == '!medialocaldata' && msg.hasMedia) {
-        const attachmentData = await msg.downloadMedia()
-        // console.log(attachmentData)
-        msg.reply(`
-            *Media localData*
-            MimeType: ${attachmentData.mimetype}
-            Filename: ${attachmentData.filename}
-            Data (length): ${attachmentData.data.length}
-        `)
-    } else if (msg.body == '!quotelocaldata' && msg.hasQuotedMsg) {
-        const quotedMsg = await msg.getQuotedMessage()
+*COVID-19 Update!!*
+Kota: Bandung
 
-        quotedMsg.reply(`
-            ID: ${quotedMsg.id._serialized}
-            Type: ${quotedMsg.type}
-            Author: ${quotedMsg.author || quotedMsg.from}
-            Timestamp: ${quotedMsg.timestamp}
-            Has Media? ${quotedMsg.hasMedia}
-        `)
-    } else if (msg.body == '!resendmedia' && msg.hasQuotedMsg) {
-        const quotedMsg = await msg.getQuotedMessage()
-        if (quotedMsg.hasMedia) {
-            const attachmentData = await quotedMsg.downloadMedia()
-            client.sendMessage(msg.from, attachmentData, {
-                caption: 'Here\'s your requested media.'
-            })
-        }
+*ODP*
+Proses Pemantauan: ${parsedData.odp}
+Selesai Pemantauan: ${parsedData.odp_selesai}
+Total ODP: ${parsedData.odp + parsedData.odp_selesai}
+
+*PDP*
+Masih Dirawat: ${parsedData.pdp}
+Pulang dan Sehat: ${parsedData.pdp_selesai}
+Total PDP: ${parsedData.pdp + parsedData.pdp_selesai}
+
+*Positif COVID-19*
+Dirawat: ${parsedData.positif}
+Sembuh: ${parsedData.sembuh}
+Meninggal: ${parsedData.meninggal}
+Total Positif:${parsedData.positif + parsedData.sembuh + parsedData.meninggal}
+
+Dicek Pada: 
+${moment().tz('Asia/Jakarta').format('LLLL').replace('pukul', '|')} WIB
+`)
     } else if (msg.body == '!location') {
         msg.reply(new Location(37.422, -122.084, 'Googleplex\nGoogle Headquarters'))
     } else if (msg.body.startsWith('!status ')) {
@@ -373,6 +355,24 @@ Data Nasional
         const chat = await msg.getChat()
         // stops typing or recording in the chat
         chat.clearState()
+    } else if (msg.body === '!aktif' || msg.body === '!daftar') {
+        const chat = await msg.getChat()
+        if (chat.isGroup) {
+            msg.reply('Maaf, perintah ini tidak bisa digunakan di dalam grup! silahkan kirim !aktif di personal chat untuk mengaktifkan notifikasi.')
+        } else {
+            User.addUser(msg.from)
+                .then(result => {
+                    if (!result) {
+                        client.sendMessage(msg.from,
+                            'Notifikasi sudah aktif.'
+                        )
+                    } else {
+                        client.sendMessage(msg.from,
+                            'Berhasil mengaktifkan notifikasi, anda akan mendapat notifikasi ketika ada permbaruan data.'
+                        )
+                    }
+                })
+        }
     } else if (msg.body === '!mati') {
         const chat = await msg.getChat()
         if (chat.isGroup) {
@@ -398,24 +398,6 @@ Data Nasional
                     )
                 }
             })
-        }
-    } else if (msg.body === '!aktif' || msg.body === '!daftar') {
-        const chat = await msg.getChat()
-        if (chat.isGroup) {
-            msg.reply('Maaf, perintah ini tidak bisa digunakan di dalam grup! silahkan kirim !aktif di personal chat untuk mengaktifkan notifikasi.')
-        } else {
-            User.addUser(msg.from)
-                .then(result => {
-                    if (!result) {
-                        client.sendMessage(msg.from,
-                            'Notifikasi sudah aktif.'
-                        )
-                    } else {
-                        client.sendMessage(msg.from,
-                            'Berhasil mengaktifkan notifikasi, anda akan mendapat notifikasi ketika ada permbaruan data.'
-                        )
-                    }
-                })
         }
     } else if (msg.body === '!corona' || msg.body === '!covid') {
         readFile('./CoronaService/data.json', 'utf-8', function (err, data) {
@@ -446,59 +428,22 @@ ${localData.lastUpdate}
             const imageAsBase64 = readFileSync('./CoronaService/corona.png', 'base64')
             const CoronaImage = new MessageMedia('image/png', imageAsBase64)
             client.sendMessage(msg.from, CoronaImage)
-
-            // ============================================= Groups
         })
-    } else if (msg.body.startsWith('!subject ')) {
-        // Change the group subject
-        const chat = await msg.getChat()
-        if (chat.isGroup) {
-            const newSubject = msg.body.slice(9)
-            chat.setSubject(newSubject)
-        } else {
-            msg.reply('This command can only be used in a group!')
-        }
-    } else if (msg.body.startsWith('!echo ')) {
-        // Replies with the same message
-        msg.reply(msg.body.slice(6))
-    } else if (msg.body.startsWith('!desc ')) {
-        // Change the group description
-        const chat = await msg.getChat()
-        if (chat.isGroup) {
-            const newDescription = msg.body.slice(6)
-            chat.setDescription(newDescription)
-        } else {
-            msg.reply('This command can only be used in a group!')
-        }
-    } else if (msg.body == '!leave') {
-        // Leave the group
+        // ============================================= Groups
+    } else if (msg.body == '!leave' && msg.fromMe) {
         const chat = await msg.getChat()
         if (chat.isGroup) {
             chat.leave()
         } else {
             msg.reply('This command can only be used in a group!')
         }
-    } else if (msg.body.startsWith('!join ')) {
+    } else if (msg.body.startsWith('!join ') && msg.fromMe) {
         const inviteCode = msg.body.split(' ')[1]
         try {
             await client.acceptInvite(inviteCode)
             msg.reply('Joined the group!')
         } catch (e) {
             msg.reply('That invite code seems to be invalid.')
-        }
-    } else if (msg.body == '!grouplocaldata') {
-        const chat = await msg.getChat()
-        if (chat.isGroup) {
-            msg.reply(`
-                *Group Details*
-                Name: ${chat.name}
-                Description: ${chat.description}
-                Created At: ${chat.createdAt.toString()}
-                Created By: ${chat.owner.user}
-                Participant count: ${chat.participants.length}
-            `)
-        } else {
-            msg.reply('This command can only be used in a group!')
         }
     } else if (msg.body == '!broadcast' && msg.from == '6282324937376@c.us') {
         readFile('./user/user.json', 'utf-8', function (err, data) {
@@ -525,7 +470,7 @@ listen.on('message', (topic, message) => {
             const number = userData[i].user
             // number = number.includes('@c.us') ? number : `${number}@c.us`;
             setTimeout(function () {
-                console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Send Corona Update to ${number}`)
+                console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Send Corona Update to${number}(${i})`)
                 if (message.toString() == 'New Update!') {
                     readFile('./CoronaService/data.json', 'utf-8', function (err, data) {
                         if (err) throw err

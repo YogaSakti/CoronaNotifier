@@ -1,10 +1,12 @@
 require('dotenv').config()
 const { forever } = require('async')
-const { createWriteStream, readFile, writeFile } = require('fs')
+const { readFile, writeFile } = require('fs')
+const { GetImage } = require('./fetcher')
+const { endpoints } = require('./data')
 const moment = require('moment-timezone')
 const fetch = require('node-fetch')
 const mqtt = require('mqtt')
-const client = mqtt.connect('mqtt://test.mosquitto.org')
+const client = mqtt.connect(process.env.MQTT_URL)
 moment.locale('id')
 
 console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Start checking data on API...`)
@@ -17,28 +19,14 @@ client.on('connect', () => {
     })
 })
 
-async function GetImage (url, path) {
-    const res = await fetch(url)
-    const fileStream = createWriteStream(path)
-    await new Promise((resolve, reject) => {
-        res.body.pipe(fileStream)
-        res.body.on('error', (err) => {
-            reject(err)
-        })
-        fileStream.on('finish', function () {
-            resolve()
-        })
-    })
-};
-
 forever(
     async function () {
-            GetImage('https://covid19.mathdro.id/api/og?width=1024&height=1024', './CoronaService/corona.png')
-            await fetch('https://indonesia-covid-19.mathdro.id/api/harian')
+            GetImage(endpoints.ogGlobal, './CoronaService/corona.png')
+            await fetch(endpoints.indoHarian)
                 .then(response => response.json())
                 .then(json => {
-                    var result = json.data
-                    var resmin = result[result.length - 2]
+                    let result = json.data
+                    const resmin = result[result.length - 2]
                     result = result[result.length - 1]
                     console.log(result)
                     if (result.jumlahKasusKumulatif == null && result.jumlahpasiendalamperawatan == null && result.jumlahPasienMeninggal == null && result.jumlahPasienSembuh == null) {
