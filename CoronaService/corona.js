@@ -21,15 +21,14 @@ client.on('connect', () => {
 
 forever(
     async function () {
-            GetImage(endpoints.ogGlobal, './CoronaService/corona.png')
-            await fetch(endpoints.indoHarian)
+            // GetImage(endpoints.ogGlobal, './CoronaService/corona.png')
+            await fetch(endpoints.statistikharian)
                 .then(response => response.json())
                 .then(json => {
-                    let result = json.data
-                    const resmin = result[result.length - 2]
-                    result = result[result.length - 1]
-                    console.log(result)
-                    if (result.jumlahKasusKumulatif == null && result.jumlahpasiendalamperawatan == null && result.jumlahPasienMeninggal == null && result.jumlahPasienSembuh == null) {
+                    let result = json.features
+                    const resmin = result[1].attributes
+                    result = result[0].attributes
+                    if (result.Jumlah_Kasus_Kumulatif == null && result.Jumlah_pasien_dalam_perawatan == null && result.Jumlah_Pasien_Meninggal == null && result.Jumlah_Pasien_Sembuh == null) {
                         console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] No Update on Data.json`)
                     } else {
                         readFile('./CoronaService/data.json', 'utf-8', function (err, data) {
@@ -37,15 +36,17 @@ forever(
                             const localData = JSON.parse(data)
                             const OnlineData = {
                                 Country: 'Indonesia',
-                                TotalCases: result.jumlahKasusKumulatif,
-                                NewCases: `+${result.jumlahKasusBaruperHari}`,
-                                ActiveCases: result.jumlahpasiendalamperawatan,
-                                TotalDeaths: result.jumlahPasienMeninggal,
-                                NewDeaths: result.jumlahPasienMeninggal - resmin.jumlahPasienMeninggal < 0 ? '+0' : `+${result.jumlahPasienMeninggal - resmin.jumlahPasienMeninggal}`,
-                                TotalRecovered: result.jumlahPasienSembuh,
-                                NewRecovered: result.jumlahPasienSembuh - resmin.jumlahPasienSembuh < 0 ? '+0' : `+${result.jumlahPasienSembuh - resmin.jumlahPasienSembuh}`,
-                                PresentaseRecovered: `${(result.jumlahPasienSembuh / result.jumlahKasusKumulatif * 100).toFixed(2)}%`,
-                                PresentaseDeath: `${(result.jumlahPasienMeninggal / result.jumlahKasusKumulatif * 100).toFixed(2)}%`,
+                                Day: result.Hari_ke,
+                                TotalCases: result.Jumlah_Kasus_Kumulatif,
+                                NewCases: `+${result.Jumlah_Kasus_Baru_per_Hari}`,
+                                ActiveCases: result.Jumlah_pasien_dalam_perawatan,
+                                NewActiveCases: `+${result.Jumlah_Kasus_Dirawat_per_Hari}`,
+                                TotalDeaths: result.Jumlah_Pasien_Meninggal,
+                                NewDeaths: result.Jumlah_Pasien_Meninggal - resmin.Jumlah_Pasien_Meninggal < 0 ? '+0' : `+${result.Jumlah_Pasien_Meninggal - resmin.Jumlah_Pasien_Meninggal}`,
+                                TotalRecovered: result.Jumlah_Pasien_Sembuh,
+                                NewRecovered: result.Jumlah_Pasien_Sembuh - resmin.Jumlah_Pasien_Sembuh < 0 ? '+0' : `+${result.Jumlah_Pasien_Sembuh - resmin.Jumlah_Pasien_Sembuh}`,
+                                PresentaseRecovered: `${(result.Jumlah_Pasien_Sembuh / result.Jumlah_Kasus_Kumulatif * 100).toFixed(2)}%`,
+                                PresentaseDeath: `${(result.Jumlah_Pasien_Meninggal / result.Jumlah_Kasus_Kumulatif * 100).toFixed(2)}%`,
                                 lastUpdate: `${moment().tz('Asia/Jakarta').format('LLLL').replace('pukul', '|')} WIB`
                             }
                             if (OnlineData.TotalCases !== localData.TotalCases || OnlineData.TotalDeaths !== localData.TotalDeaths || OnlineData.TotalRecovered !== localData.TotalRecovered || OnlineData.ActiveCases !== localData.ActiveCases) {

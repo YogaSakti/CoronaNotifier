@@ -403,31 +403,31 @@ ${moment().tz('Asia/Jakarta').format('LLLL').replace('pukul', '|')} WIB
         readFile('./CoronaService/data.json', 'utf-8', function (err, data) {
             if (err) throw err
             const localData = JSON.parse(data)
-            const newCases = localData.NewCases === '' ? 0 : localData.NewCases
-            const newDeaths = localData.NewDeaths === '' ? 0 : localData.NewDeaths
-            const NewRecovered = localData.NewRecovered === '' ? 0 : localData.NewRecovered
             client.sendMessage(msg.from, `
 *COVID-19 Update!!*
 Negara: ${localData.Country}
+Hari Ke: ${localData.Day}
 
 Total Kasus: ${localData.TotalCases}
-*Kasus Baru: ${newCases}*
-Total Pasien: ${localData.ActiveCases}
+*Kasus Baru: ${localData.NewCases}*
+
+Pasien Dirawat: ${localData.ActiveCases}
+*Dirawat Baru: ${localData.NewActiveCases}*
 
 Pasien Sembuh: ${localData.TotalRecovered}
-*Sembuh Baru: ${NewRecovered}*
+*Sembuh Baru: ${localData.NewRecovered}*
 Presentase Sembuh: ${localData.PresentaseRecovered}
 
 Pasien Meninggal: ${localData.TotalDeaths}
-*Meninggal Baru: ${newDeaths}*
+*Meninggal Baru: ${localData.NewDeaths}*
 Presentase Meninggal: ${localData.PresentaseDeath}
 
 Pembaruan Terakhir: 
 ${localData.lastUpdate}
             `)
-            const imageAsBase64 = readFileSync('./CoronaService/corona.png', 'base64')
-            const CoronaImage = new MessageMedia('image/png', imageAsBase64)
-            client.sendMessage(msg.from, CoronaImage)
+            // const imageAsBase64 = readFileSync('./CoronaService/corona.png', 'base64')
+            // const CoronaImage = new MessageMedia('image/png', imageAsBase64)
+            // client.sendMessage(msg.from, CoronaImage)
         })
         // ============================================= Groups
     } else if (msg.body == '!leave' && msg.fromMe) {
@@ -481,10 +481,13 @@ listen.on('message', (topic, message) => {
                         client.sendMessage(number, `
 *COVID-19 Update!!*
 Negara: ${localData.Country}
+Hari Ke: ${localData.Day}
 
 Total Kasus: ${localData.TotalCases}
-*Kasus Baru: ${newCases}*
-Total Pasien: ${localData.ActiveCases}
+*Kasus Baru: ${localData.NewCases}*
+
+Pasien Dirawat: ${localData.ActiveCases}
+*Dirawat Baru: ${localData.NewActiveCases}*
 
 Pasien Sembuh: ${localData.TotalRecovered}
 *Sembuh Baru: ${NewRecovered}*
