@@ -59,19 +59,12 @@ async function getCountry (id) {
 
 async function getHarian () {
     return new Promise(async (resolve, reject) => {
-        await fetch(endpoints.indoHarian)
+        await fetch(endpoints.statistikharian)
             .then(response => response.json())
             .then(json => {
-                const result = json.data
-                const resYesterday = result[result.length - 2]
-                const resultNow = result[result.length - 1]
-                if (resultNow.jumlahKasusKumulatif == null && resultNow.jumlahpasiendalamperawatan == null && resultNow.jumlahPasienMeninggal == null && resultNow.jumlahPasienSembuh == null) {
-                    console.log(resYesterday)
-                    resolve(resYesterday)
-                } else {
-                    console.log(resultNow)
-                    resolve(resultNow)
-                }
+                let result = json.features
+                result = result.map(x => x.attributes)
+                resolve(result)
             })
             .catch((err) => {
                 reject(err)

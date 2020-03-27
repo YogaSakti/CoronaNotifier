@@ -16,7 +16,10 @@ const qrcode = require('qrcode-terminal')
 const mqtt = require('mqtt')
 const listen = mqtt.connect(process.env.MQTT_URL)
 const User = require('./user/user.js')
-const { getBandung } = require('./coronaService/fetcher')
+const {
+    getBandung
+} = require('./coronaService/fetcher')
+let sleep = require('util').promisify(setTimeout);
 
 const SESSION_FILE_PATH = './session.json'
 let sessionCfg
@@ -233,8 +236,30 @@ kenalin aku Honk! 🤖 robot yang akan memberitahumu informasi mengenai COVID-19
 !peta => Peta Sebaran COVID-19 per prov.
 !sumber => Sumber data Honk!
 
+!donasi => Mari berdonasi bersama SGB X GRAISENA LAWAN COVID-19.
 
 Made with ♥️ by Yoga Sakti`)
+    } else if (msg.body == '!donasi') {
+        const logoDonasi = new MessageMedia('image/png', readFileSync('./Donasi-1.jpg', 'base64'))
+        client.sendMessage(msg.from, logoDonasi,{
+            caption: `
+*SGB X GRAISENA LAWAN COVID-19*
+            
+Sebagai respon terhadap penyebaran COVID-19 di Indonesia,
+SGB Lawan Corona bersama Yayasan Gerakan Indonesia Sadar Bencana (GRAISENA) di lapangan
+telah menggalang pengumpulan dana publik untuk mencegah penyebaran virus dan melindungi masyarakat.
+           
+Semua hasil donasi yang sudah teman-teman berikan akan kita teruskan kepada Yayasan GRAISENA
+sebagai relawan dilapangan, SGB Lawan Corona hanyalah penengah dalam gerakan ini.
+            
+*Ayo teman-teman mari bantu relawan, medis dan pahlawan lainnya yang sedang berjuang untuk berantas Virus Corona ini!*
+Mari keluarkan #CebanPertama mu
+
+_Total donasi dan Tanggal penutupan donasi dapat di periksa pada web https://sgbcovid19.com/_`
+        })
+    const infoRek = new MessageMedia('image/png', readFileSync('./Donasi-2.jpg', 'base64'))
+    // delay ini menanggulangi jika terjadi delay ketika mengirim gambar pertama
+    setTimeout(function() {client.sendMessage(msg.from, infoRek)}, 500);
     } else if (msg.body == '!sumber') {
         client.sendMessage(msg.from, `
 Sumber: 
