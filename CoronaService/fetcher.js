@@ -1,8 +1,12 @@
 /* eslint-disable no-async-promise-executor */
 const fetch = require('node-fetch')
 const moment = require('moment-timezone')
-const { createWriteStream } = require('fs')
-const { endpoints } = require('./data')
+const {
+    createWriteStream
+} = require('fs')
+const {
+    endpoints
+} = require('./data')
 moment.locale('id')
 
 async function GetImage (url, path) {
@@ -30,6 +34,7 @@ async function getGlobal () {
                     deaths: json.deaths.value,
                     lastUpdate: moment(json.lastUpdate).format('LLLL')
                 })
+                // console.log(data)
                 resolve(data)
             })
             .catch((err) => {
@@ -59,7 +64,7 @@ async function getCountry (id) {
 
 async function getHarian () {
     return new Promise(async (resolve, reject) => {
-        await fetch(endpoints.statistikharian)
+        await fetch('https://services5.arcgis.com/VS6HdKS0VfIhv8Ct/ArcGIS/rest/services/Statistik_Perkembangan_COVID19_Indonesia/FeatureServer/0/query?where=Jumlah_Kasus_Kumulatif+IS+NOT+NULL+AND+Jumlah_Pasien_Sembuh+IS+NOT+NULL+AND+Jumlah_Pasien_Meninggal+IS+NOT+NULL&outFields=*&orderByFields=Tanggal+asc&resultRecordCount=31&f=json')
             .then(response => response.json())
             .then(json => {
                 let result = json.features
@@ -81,9 +86,9 @@ async function getJabar () {
                 const dateNow = moment().format('L').replace(/\//g, '-')
                 const getbyDateNow = json.filter(x => x.tanggal === dateNow)
                 const getbyDateYesterday = json.filter(x => x.tanggal === dateYerterday)
-                const result = getbyDateNow.total_odp == null || getbyDateNow.total_pdp == null ? getbyDateYesterday : getbyDateNow
-                console.log(result)
-                resolve(result)
+                const result = getbyDateNow.total_odp !== null && getbyDateNow.total_pdp !== null ? getbyDateNow : getbyDateYesterday
+                // console.log(result[0])
+                resolve(result[0])
             })
             .catch((err) => {
                 reject(err)
@@ -97,7 +102,7 @@ async function getBekasi () {
             .then(response => response.json())
             .then(json => {
                 const result = json.Data[0]
-                console.log(result)
+                // console.log(result)
                 resolve(result)
             })
             .catch((err) => {
@@ -110,19 +115,73 @@ async function getBandung () {
     return new Promise(async (resolve, reject) => {
         const options = {
             headers: {
-              authority: 'covid19.bandung.go.id',
-              authorization: 'RkplDPdGFxTSjARZkZUYi3FgRdakJy',
-              'content-type': 'application/json',
-              'sec-fetch-site': 'same-origin',
-              'sec-fetch-mode': 'cors',
-              referer: 'https://covid19.bandung.go.id/'
+                authority: 'covid19.bandung.go.id',
+                authorization: 'RkplDPdGFxTSjARZkZUYi3FgRdakJy',
+                'content-type': 'application/json',
+                'sec-fetch-site': 'same-origin',
+                'sec-fetch-mode': 'cors',
+                referer: 'https://covid19.bandung.go.id/'
             }
-          }
+        }
         await fetch(endpoints.dataBandung, options)
             .then(response => response.json())
             .then(json => {
                 const result = json.data
-                console.log(result)
+                // console.log(result)
+                resolve(result)
+            })
+            .catch((err) => {
+                reject(err)
+            })
+    })
+};
+
+async function getBandungKec () {
+    return new Promise(async (resolve, reject) => {
+        const options = {
+            headers: {
+                authority: 'covid19.bandung.go.id',
+                authorization: 'RkplDPdGFxTSjARZkZUYi3FgRdakJy',
+                'content-type': 'application/json',
+                'sec-fetch-site': 'same-origin',
+                'sec-fetch-mode': 'cors',
+                referer: 'https://covid19.bandung.go.id/'
+            }
+        }
+        await fetch(endpoints.dataBandungKec, options)
+            .then(response => response.json())
+            .then(json => {
+                let result = json.data
+                const resArr = []
+                result = result.list.map(x => {
+                    resArr.push({
+                        wilayah: x.wilayah,
+                        odp: x.odp,
+                        odp_selesai: x.odp_selesai,
+                        pdp: x.pdp,
+                        pdp_selesai: x.pdp_selesai,
+                        sembuh: x.sembuh,
+                        positif: x.positif,
+                        positif_proaktif: x.positif_proaktif,
+                        meninggal: x.meninggal
+                    })
+                })
+                // console.log(resArr)
+                resolve(result)
+            })
+            .catch((err) => {
+                reject(err)
+            })
+    })
+};
+
+async function getWismaAtlit () {
+    return new Promise(async (resolve, reject) => {
+        await fetch(endpoints.dataWismaAtlit)
+            .then(response => response.json())
+            .then(json => {
+                const result = json.data
+                // console.log(result)
                 resolve(result)
             })
             .catch((err) => {
@@ -146,7 +205,12 @@ async function getBandung () {
 //         console.log(data)
 // })
 
-module.exports.GetImage = GetImage
-module.exports.getBandung = getBandung
-module.exports.getBekasi = getBekasi
-module.exports.getJabar = getJabar
+module.exports = {
+    GetImage: GetImage,
+    getGlobal: getGlobal,
+    getWismaAtlit: getWismaAtlit,
+    getBandung: getBandung,
+    getBandungKec: getBandungKec,
+    getBekasi: getBekasi,
+    getJabar: getJabar
+}
