@@ -22,7 +22,7 @@ client.on('connect', () => {
 forever(
     async function () {
             // GetImage(endpoints.ogGlobal, './CoronaService/corona.png')
-            await fetch(endpoints.statistikharian, { cache: 'reload' })
+            await fetch(endpoints.statistikHarian, { cache: 'reload' })
                 .then(response => response.json())
                 .then(json => {
                     let result = json.features

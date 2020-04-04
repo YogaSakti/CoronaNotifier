@@ -10,15 +10,14 @@ const {
     Client,
     MessageMedia
 } = require('whatsapp-web.js')
-const {
+let {
     insertDataUsers,
     deleteDataUsers,
     getDataUsers,
     getAllDataUsers,
-    DB_OPTIONS,
-    DB_CONN
+    DB
 } = require('./CoronaService/db')
-const MongoClient = require('mongodb').MongoClient
+
 const moment = require('moment-timezone')
 const qrcode = require('qrcode-terminal')
 const mqtt = require('mqtt')
@@ -73,7 +72,7 @@ client.on('qr', (qr) => {
 })
 
 client.on('authenticated', (session) => {
-    console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Authenticated Success!`)
+    console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Authenticated Success.`)
     // console.log(session);
     sessionCfg = session
     writeFile(SESSION_FILE_PATH, JSON.stringify(session), function (err) {
@@ -93,12 +92,9 @@ client.on('auth_failure', msg => {
     })
 })
 
-let db
 client.on('ready', async () => {
-    console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Whatsapp bot ready!`)
-    const dbClient = await MongoClient.connect(DB_CONN, DB_OPTIONS)
-    db = dbClient.db('bot')
-    console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Database ready!`)
+    DB = await DB()
+    console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Whatsapp bot ready.`)
 })
 
 // ======================= Begin initialize mqtt broker
@@ -195,7 +191,7 @@ client.on('message', async msg => {
         const chats = await client.getChats()
         const group = chats.filter(x => x.isGroup == true)
         const personalChat = chats.filter(x => x.isGroup == false)
-        const getListUsers = await getAllDataUsers(db)
+        const getListUsers = await getAllDataUsers(DB)
             client.sendMessage(msg.from, `The bot has...
 Chats open: ${chats.length} 
 Groups chats: ${group.length}
@@ -289,21 +285,21 @@ _*kirim !help untuk melihat menu utama._`)
     } else if (msg.body == '!aktif') {
         const chat = await msg.getChat()
         // Cek & Input data ke MongoDB
-        const dbDataUsers = await getDataUsers(db, chat.isGroup ? msg.from = msg.author : msg.from = msg.from)
+        const dbDataUsers = await getDataUsers(DB, chat.isGroup ? msg.from = msg.author : msg.from = msg.from)
         if (msg.body && dbDataUsers.length < 1) {
             dbDataUsers.push(chat.isGroup ? msg.from = msg.author : msg.from = msg.from)
-            await insertDataUsers(db, chat.isGroup ? msg.from = msg.author : msg.from = msg.from)
+            await insertDataUsers(DB, chat.isGroup ? msg.from = msg.author : msg.from = msg.from)
             await client.sendMessage(msg.from, `Selamat, nomor hp anda "${msg.from.split('@c.us')[0]}" berhasil diregistrasi kedalam daftar notifikasi, anda akan mendapat notifikasi ketika ada pembaruan data.`)
         } else {
             await client.sendMessage(msg.from, `Maaf, nomor hp anda "${msg.from.split('@c.us')[0]}" telah diregistrasi. Untuk membatalkan kirim *!mati*`)
         }
     } else if (msg.body == '!mati') {
         const chat = await msg.getChat()
-        const dbDataUsers = await getDataUsers(db, chat.isGroup ? msg.from = msg.author : msg.from = msg.from)
+        const dbDataUsers = await getDataUsers(DB, chat.isGroup ? msg.from = msg.author : msg.from = msg.from)
         if (msg.body && dbDataUsers.length < 1) {
             await client.sendMessage(msg.from, 'maaf, Nomor anda belum diregistrasi. Registrasi nomor anda dengan kirim *!aktif*')
         } else {
-            await deleteDataUsers(db, chat.isGroup ? msg.from = msg.author : msg.from = msg.from)
+            await deleteDataUsers(DB, chat.isGroup ? msg.from = msg.author : msg.from = msg.from)
             await client.sendMessage(msg.from, 'Nomor anda telah dihapus dari daftar notifikasi')
         }
 
@@ -346,7 +342,7 @@ _*kirim !help untuk melihat menu utama._`)
             client.sendMessage(number, message)
         }
     } else if (msg.body == '!broadcast' && msg.from == process.env.ADMIN_NUMBER) {
-    const getListUsers = await getAllDataUsers(db)
+    const getListUsers = await getAllDataUsers(DB)
     getListUsers.map((item, index) => {
         const number = item.phone_number
                 setTimeout(async function () {
@@ -359,7 +355,7 @@ _*kirim !help untuk melihat menu utama._`)
 
 listen.on('message', async (topic, message) => {
     console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] MQTT: ${message.toString()}`)
-    const getListUsers = await getAllDataUsers(db)
+    const getListUsers = await getAllDataUsers(DB)
     if (message.toString() == 'New Update!') {
         readFile('./CoronaService/data.json', 'utf-8', function (err, data) {
             if (err) throw err
@@ -394,7 +390,7 @@ _https://www.covid19.go.id_
                     `)
 
                     // Delay 2 Sec
-                }, index * 2000)
+                }, index * 1100)
             })
         })
     }

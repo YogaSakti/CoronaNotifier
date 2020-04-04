@@ -65,7 +65,7 @@ async function getCountry (id) {
 
 async function getHarian () {
     return new Promise(async (resolve, reject) => {
-        await fetch(endpoints.statistikharianAll)
+        await fetch(endpoints.statistikHarianAll)
             .then(response => response.json())
             .then(json => {
                 let result = json.features
