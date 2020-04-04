@@ -1,15 +1,1 @@
-{
-    "Country": "Indonesia",
-    "Day": 30,
-    "TotalCases": 1528,
-    "NewCases": "+114",
-    "ActiveCases": 1311,
-    "NewActiveCases": "+94",
-    "TotalDeaths": 136,
-    "NewDeaths": "+14",
-    "TotalRecovered": 81,
-    "NewRecovered": "+6",
-    "PresentaseRecovered": "5.30%",
-    "PresentaseDeath": "8.90%",
-    "lastUpdate": "Selasa, 31 Maret 2020 | 17.30 WIB"
-}
+{"Country":"Indonesia","Day":33,"TotalCases":1986,"NewCases":"+196","ActiveCases":1671,"NewActiveCases":"+163","TotalDeaths":181,"NewDeaths":"+11","TotalRecovered":134,"NewRecovered":"+22","PresentaseRecovered":"6.75%","PresentaseDeath":"9.11%","lastUpdate":"Sabtu, 4 April 2020 | 12.21 WIB"}

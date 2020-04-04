@@ -22,12 +22,13 @@ client.on('connect', () => {
 forever(
     async function () {
             // GetImage(endpoints.ogGlobal, './CoronaService/corona.png')
-            await fetch(endpoints.statistikharian)
+            await fetch(endpoints.statistikharian, { cache: 'reload' })
                 .then(response => response.json())
                 .then(json => {
                     let result = json.features
                     const resmin = result[1].attributes
                     result = result[0].attributes
+                    console.log(result)
                     if (result.Jumlah_Kasus_Kumulatif == null && result.Jumlah_pasien_dalam_perawatan == null && result.Jumlah_Pasien_Meninggal == null && result.Jumlah_Pasien_Sembuh == null) {
                         console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] No Update on Data.json`)
                     } else {

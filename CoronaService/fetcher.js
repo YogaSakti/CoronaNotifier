@@ -1,6 +1,7 @@
 /* eslint-disable no-async-promise-executor */
 const fetch = require('node-fetch')
 const moment = require('moment-timezone')
+const cheerio = require('cheerio')
 const {
     createWriteStream
 } = require('fs')
@@ -28,12 +29,12 @@ async function getGlobal () {
         await fetch(endpoints.Global)
             .then(response => response.json())
             .then(json => {
-                const data = JSON.stringify({
-                    confirmed: json.confirmed.value,
-                    recovered: json.recovered.value,
-                    deaths: json.deaths.value,
+                const data = {
+                    confirmed: json.confirmed.value.toLocaleString(),
+                    recovered: json.recovered.value.toLocaleString(),
+                    deaths: json.deaths.value.toLocaleString(),
                     lastUpdate: moment(json.lastUpdate).format('LLLL')
-                })
+                }
                 // console.log(data)
                 resolve(data)
             })
@@ -41,7 +42,7 @@ async function getGlobal () {
                 reject(err)
             })
     })
-};
+}
 
 async function getCountry (id) {
     return new Promise(async (resolve, reject) => {
@@ -64,7 +65,7 @@ async function getCountry (id) {
 
 async function getHarian () {
     return new Promise(async (resolve, reject) => {
-        await fetch('https://services5.arcgis.com/VS6HdKS0VfIhv8Ct/ArcGIS/rest/services/Statistik_Perkembangan_COVID19_Indonesia/FeatureServer/0/query?where=Jumlah_Kasus_Kumulatif+IS+NOT+NULL+AND+Jumlah_Pasien_Sembuh+IS+NOT+NULL+AND+Jumlah_Pasien_Meninggal+IS+NOT+NULL&outFields=*&orderByFields=Tanggal+asc&resultRecordCount=31&f=json')
+        await fetch(endpoints.statistikharianAll)
             .then(response => response.json())
             .then(json => {
                 let result = json.features
@@ -96,15 +97,113 @@ async function getJabar () {
     })
 };
 
-async function getBekasi () {
+async function getJateng () {
     return new Promise(async (resolve, reject) => {
-        await fetch(endpoints.databekasi)
+        await fetch(endpoints.dataProvJateng)
+            .then(response => response.text())
+            .then(text => {
+                const $ = cheerio.load(text)
+                const dataInfo = $('p.text-detail')
+                const dataPositifRed = $('h3.font-counter.fc-red')
+                const dataPositifGreen = $('h3.font-counter.fc-green')
+                const dataOdp = $('h3.font-counter.fc-ungu')
+                const dataPdp = $('h3.font-counter.fc-orange')
+                const result = {
+                    sumber: dataInfo[1].children[0].next.data.trim(),
+                    odp: parseFloat(dataOdp[0].children[0].data),
+                    pdp: parseFloat(dataPdp[0].children[0].data),
+                    positif_dirawat: parseInt(dataPositifRed[1].children[0].data),
+                    positif_sembuh: parseInt(dataPositifGreen[0].children[0].data),
+                    posituf_meninggal: parseInt(dataPositifRed[2].children[0].data),
+                    total_positif: parseInt(dataPositifRed[0].children[0].data),
+                    last_update: dataInfo[2].children[0].next.data.split('|')[0].trim()
+                }
+                // console.log(result)
+                resolve(result)
+            })
+            .catch((err) => {
+                reject(err)
+            })
+    })
+};
+
+async function getBekasiOld () {
+    return new Promise(async (resolve, reject) => {
+        await fetch(endpoints.dataBekasi)
             .then(response => response.json())
             .then(json => {
                 const result = json.Data[0]
                 // console.log(result)
                 resolve(result)
             })
+            .catch((err) => {
+                reject(err)
+            })
+    })
+};
+
+async function getBekasi () {
+    return new Promise(async (resolve, reject) => {
+        await fetch(endpoints.dataBekasiNew)
+        .then(res => res.text())
+        .then(text => {
+            const $ = cheerio.load(text)
+            const dataInfo = $('div.col-md-12')
+            const rawData = $('div.box-content')
+            const dataTotal = []
+            const dataDetail = []
+            rawData.find('h1').each((i, element) => { dataTotal.push(parseInt($(element).text())) })
+            rawData.find('div.align-right').each((i, element) => { dataDetail.push(parseInt($(element).text())) })
+            const result = {
+                odp: dataTotal[0],
+                odp_dirawat: dataDetail[0],
+                odp_selesai: dataDetail[1],
+                pdp: dataTotal[1],
+                pdp_dirawat: dataDetail[2],
+                pdp_sembuh: dataDetail[3],
+                total_positif: dataDetail[4],
+                last_update: dataInfo.children('h2').find('strong[style="color:#fff"]').text().split(':')[1].trim()
+            }
+            // console.log(result)
+            resolve(result)
+        })
+            .catch((err) => {
+                reject(err)
+            })
+    })
+};
+
+async function getBogor () {
+    return new Promise(async (resolve, reject) => {
+        await fetch(endpoints.dataBogor)
+        .then(res => res.text())
+        .then(text => {
+            const $ = cheerio.load(text)
+            const dataInfo = $('div.panel-heading.head.bluedark')
+            const rawData = $('div.inner')
+            const data = []
+            rawData.find('h3').each((index, element) => {
+                const value = $(element).text()
+                data.push(value)
+            })
+            const result = {
+                sumber: dataInfo[1].children[1].children[3].children[0].data.split('|')[1].replace('Sumber: ', '').trim(),
+                odp: data[0],
+                odp_selesai: data[1],
+                odp_dirawat: data[2],
+                pdp: data[3],
+                pdp_sembuh: data[4],
+                pdp_dirawat: data[5],
+                pdp_meninggal: data[6],
+                total_positif: data[7],
+                positif_sembuh: data[8],
+                positif_dirawat: data[9],
+                posituf_meninggal: data[10],
+                last_update: `${dataInfo[1].children[1].children[1].children[0].data.trim()} | ${dataInfo[1].children[1].children[3].children[0].data.split('|')[0].trim()}`
+            }
+            // console.log(result)
+            resolve(result)
+        })
             .catch((err) => {
                 reject(err)
             })
@@ -206,11 +305,14 @@ async function getWismaAtlit () {
 // })
 
 module.exports = {
-    GetImage: GetImage,
-    getGlobal: getGlobal,
-    getWismaAtlit: getWismaAtlit,
-    getBandung: getBandung,
-    getBandungKec: getBandungKec,
-    getBekasi: getBekasi,
-    getJabar: getJabar
+    GetImage,
+    getGlobal,
+    getWismaAtlit,
+    getBandung,
+    getBandungKec,
+    getBekasiOld,
+    getBekasi,
+    getJabar,
+    getJateng,
+    getBogor
 }
