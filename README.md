@@ -3,7 +3,7 @@
 [![whatsapp-web.js version](https://img.shields.io/github/package-json/dependency-version/YogaSakti/CoronaNotifier/whatsapp-web.js)](https://www.npmjs.com/package/whatsapp-web.js)
 ![Twitter](https://img.shields.io/twitter/follow/teman_bahagia?style=social)
 
-Corona Notifier is a Whatsapp automatic notification robot using MQTT & nodeJS. The Corona Service will collect latest data about the COVID-19 indonesian case from [indonesia-covid-19-api](https://indonesia-covid-19.mathdro.id/api) by [mathdroid](https://github.com/mathdroid/indonesia-covid-19-api)
+Corona Notifier is a Whatsapp automatic notification robot using MQTT, nodeJS & MongoDB. The Corona Service will collect latest data about the COVID-19 indonesian case from [indonesia-covid-19-api](https://indonesia-covid-19.mathdro.id/api) by [mathdroid](https://github.com/mathdroid/indonesia-covid-19-api)
 
 #### The Diagram
 ![Diagram](Diagram.png)
@@ -11,7 +11,7 @@ Corona Notifier is a Whatsapp automatic notification robot using MQTT & nodeJS. 
 
 ## Getting Started
 
-This project require MQTT broker, nodeJS
+This project require MQTT broker, nodeJS & MongoDB.
 
 Clone this project
 
@@ -27,10 +27,23 @@ Install the dependencies:
 > npm i
 ```
 
-Edit MQTT topic in .env file:
+create .env before run the program
+```
+cp .env.example .env
+```
+
+Edit .env file:
 
 ```
-MQTT_TOPIC= ....
+MQTT_URL=
+MQTT_TOPIC=
+ADMIN_NUMBER=
+```
+Edit db.js file:
+
+```
+DB_CONN =
+DB_COLL =
 ```
 
 run the Whatsapp bot
