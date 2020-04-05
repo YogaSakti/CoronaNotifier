@@ -1,4 +1,4 @@
-# Corona Notifier 
+# Corona Notifier 🔔
 ![GitHub last commit](https://img.shields.io/github/last-commit/YogaSakti/CoronaNotifier)
 [![whatsapp-web.js version](https://img.shields.io/github/package-json/dependency-version/YogaSakti/CoronaNotifier/whatsapp-web.js)](https://www.npmjs.com/package/whatsapp-web.js)
 ![Twitter](https://img.shields.io/twitter/follow/teman_bahagia?style=social)
@@ -63,7 +63,7 @@ run the corona service
 > npm run service
 ```
 
-## Bot Whatsapp Command
+## Bot Whatsapp Command ❗❗
 (WARNING: This is only available with Bahasa Language)
 
 This bot is for covid-19 information purpose by automatically answer for available data, by using the available command :
@@ -121,3 +121,8 @@ Contributions, issues and feature requests are welcome!<br />Feel free to check 
 ## Show your support
 
 Give a ⭐️ if this project helped you!
+
+## 📝 License
+
+Copyright © 2020 [Yoga Sakti](https://github.com/YogaSakti).<br />
+This project is [MIT](https://github.com/YogaSakti/CoronaNotifier/blob/master/LICENSE) licensed.
