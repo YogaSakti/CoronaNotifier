@@ -42,8 +42,9 @@ ADMIN_NUMBER=
 Edit db.js file:
 
 ```
-DB_CONN =
-DB_COLL =
+const DB_URL = 'mongodb+srv://'
+const DB_NAME = 
+const DB_COLLECTION =
 ```
 
 run the Whatsapp bot
