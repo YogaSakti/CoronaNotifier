@@ -3,7 +3,7 @@
 [![whatsapp-web.js version](https://img.shields.io/github/package-json/dependency-version/YogaSakti/CoronaNotifier/whatsapp-web.js)](https://www.npmjs.com/package/whatsapp-web.js)
 ![Twitter](https://img.shields.io/twitter/follow/teman_bahagia?style=social)
 
-Corona Notifier is a Whatsapp automatic notification robot using MQTT, nodeJS & MongoDB. The Corona Service will collect latest data about the COVID-19 indonesian case from [indonesia-covid-19-api](https://indonesia-covid-19.mathdro.id/api) by [mathdroid](https://github.com/mathdroid/indonesia-covid-19-api)
+Corona Notifier is a Whatsapp automatic notification robot using MQTT, nodeJS & MongoDB. The Corona Service will collect latest data about the COVID-19 indonesian case from [indonesia-covid-19-api](https://indonesia-covid-19.mathdro.id/api) by [mathdroid](https://github.com/mathdroid/indonesia-covid-19-api) 
 
 #### The Diagram
 ![Diagram](Diagram.png)
@@ -13,6 +13,7 @@ Corona Notifier is a Whatsapp automatic notification robot using MQTT, nodeJS & 
 
 This project require MQTT broker, nodeJS & MongoDB.
 
+### Install
 Clone this project
 
 ```bash
@@ -35,9 +36,9 @@ cp .env.example .env
 Edit .env file:
 
 ```
-MQTT_URL=
+MQTT_URL=mqtt://
 MQTT_TOPIC=
-ADMIN_NUMBER=
+ADMIN_NUMBER= <number>@c.us
 ```
 Edit db.js file:
 
@@ -47,18 +48,19 @@ const DB_NAME =
 const DB_COLLECTION =
 ```
 
+### Usage
 run the Whatsapp bot
 
 ```bash
-> node index.js
+> npm run start
 ```
 
 after running it you need to scan the qr
 
-run the corona service
+run the corona service 
 
 ```bash
-> node CoronaService\corona.js
+> npm run service
 ```
 
 ## Bot Whatsapp Command
@@ -104,3 +106,18 @@ Using this command will return a list of websites that contain coronavirus data.
 7. !peta 
 Using this command will return the corona virus distribution map information.
 
+## Author
+
+👤 **Yoga Sakti**
+
+* Website: [yogs.me](https://yogs.me)
+* Twitter: [@teman_bahagia](https://twitter.com/teman_bahagia)
+* Github: [@YogaSakti](https://github.com/YogaSakti)
+
+## 🤝 Contributing
+
+Contributions, issues and feature requests are welcome!<br />Feel free to check [issues page](https://github.com/YogaSakti/CoronaNotifier/issues) OR [pulls page](https://github.com/YogaSakti/CoronaNotifier/pulls). 
+
+## Show your support
+
+Give a ⭐️ if this project helped you!
