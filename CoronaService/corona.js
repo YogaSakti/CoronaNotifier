@@ -1,8 +1,8 @@
 require('dotenv').config()
 const { forever } = require('async')
 const { readFile, writeFile } = require('fs')
-const { GetImage } = require('./fetcher')
-const { endpoints } = require('./data')
+const { endpoints } = require('../util/data')
+const { getProv } = require('../util/fetcher')
 const moment = require('moment-timezone')
 const fetch = require('node-fetch')
 const mqtt = require('mqtt')
@@ -21,14 +21,13 @@ client.on('connect', () => {
 
 forever(
     async function () {
-            // GetImage(endpoints.ogGlobal, './CoronaService/corona.png')
+            const dataProv = await getProv()
             await fetch(endpoints.statistikHarian, { cache: 'reload' })
                 .then(response => response.json())
                 .then(json => {
                     let result = json.features
                     const resmin = result[1].attributes
                     result = result[0].attributes
-                    console.log(result)
                     if (result.Jumlah_Kasus_Kumulatif == null && result.Jumlah_pasien_dalam_perawatan == null && result.Jumlah_Pasien_Meninggal == null && result.Jumlah_Pasien_Sembuh == null) {
                         console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] No Update on Data.json`)
                     } else {
@@ -38,6 +37,9 @@ forever(
                             const OnlineData = {
                                 Country: 'Indonesia',
                                 Day: result.Hari_ke,
+                                ProvinsiTerdampak: dataProv.total.prov,
+                                TotalODP: dataProv.total.odp,
+                                TotalPDP: dataProv.total.pdp,
                                 TotalCases: result.Jumlah_Kasus_Kumulatif,
                                 NewCases: `+${result.Jumlah_Kasus_Baru_per_Hari}`,
                                 ActiveCases: result.Jumlah_pasien_dalam_perawatan,

@@ -9,3 +9,13 @@ coronaService/test.js
 CoronaService/anu.json
 user/user.json
 .env
+
+util/anu.js
+
+util/test.js
+
+package-lock.json
+
+util/anu.json
+
+.eslintrc.js

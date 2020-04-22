@@ -10,15 +10,15 @@ const DB_OPTIONS = {
     useNewUrlParser: true,
     useUnifiedTopology: true
 }
-const DB_URL = 'mongodb+srv://'
-const DB_NAME = ''
-const DB_COLLECTION = ''
+const DB_URL = process.env.DB_URL
+const DB_NAME = process.env.DB_NAME
+const DB_COLLECTION = process.env.DB_COLLECTION
 
 const DB = () => new Promise((resolve, reject) => {
         MongoClient.connect(DB_URL, DB_OPTIONS, function (err, client) {
             if (err) throw err
             console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Connected successfully to Database.`)
-            resolve(client.db(DB_NAME)) // .collection(DB_COLLECTION)
+            resolve(client.db(DB_NAME))
         })
     })
 

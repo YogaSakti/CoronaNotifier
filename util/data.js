@@ -4,12 +4,15 @@ module.exports.endpoints = {
     indoHarian: 'https://indonesia-covid-19.mathdro.id/api/harian',
     statistikHarian: 'https://services5.arcgis.com/VS6HdKS0VfIhv8Ct/ArcGIS/rest/services/Statistik_Perkembangan_COVID19_Indonesia/FeatureServer/0/query?where=Jumlah_Kasus_Kumulatif+IS+NOT+NULL+AND+Jumlah_Pasien_Sembuh+IS+NOT+NULL+AND+Jumlah_Pasien_Meninggal+IS+NOT+NULL&outFields=*&orderByFields=Tanggal+desc&resultRecordCount=2&f=json',
     statistikHarianAll: 'https://services5.arcgis.com/VS6HdKS0VfIhv8Ct/ArcGIS/rest/services/Statistik_Perkembangan_COVID19_Indonesia/FeatureServer/0/query?where=Jumlah_Kasus_Kumulatif+IS+NOT+NULL+AND+Jumlah_Pasien_Sembuh+IS+NOT+NULL+AND+Jumlah_Pasien_Meninggal+IS+NOT+NULL&outFields=*&orderByFields=Tanggal+asc&resultRecordCount=100&f=json',
+    dataKemkes: 'https://covid19.disiplin.id/',
     dataProvJabar: 'https://coredata.jabarprov.go.id/analytics/covid19/aggregation.json',
-    dataProvJateng: 'https://corona.jatengprov.go.id/',
+    dataProvjabarV2: 'https://covid19-public.digitalservice.id/api/v1/rekapitulasi/jabar', // /harian?level=kab /kumulatif?level=prov
+    dataProvjabarKasus: 'https://covid19-public.digitalservice.id/api/v1/sebaran/jabar',
+    dataProvJateng: 'https://corona.jatengprov.go.id/data-statistik',
+    dataProvJatim: 'http://covid19dev.jatimprov.go.id/xweb/draxi',
+    dataProvDKIJakarta: 'https://services6.arcgis.com/LpNjFysmsfdTpDD0/ArcGIS/rest/services/Tabel_Histori_COVID19/FeatureServer/0/query?where=Positif_Harian IS NOT NULL AND Meninggal IS NOT NULL AND PDP_Harian IS NOT NULL AND ODP_Harian IS NOT NULL&outFields=*&orderByFields=Date_update+desc&resultRecordCount=1&f=json',
     dataBandung: 'https://covid19.bandung.go.id/api/covid19bdg/v1/covidsummary/get',
     dataBandungKec: 'https://covid19.bandung.go.id/api/covid19bdg/v1/covid/list',
-    dataBekasi: 'http://corona.bekasikota.go.id/public/api/case/get',
-    dataBekasiNew: 'http://corona.bekasikota.go.id/#odppdp',
-    dataBogor: 'http://www.covid19.kotabogor.go.id/',
+    dataBekasi: 'https://corona.bekasikota.go.id/',
     dataWismaAtlit: 'https://indonesia-covid-19.mathdro.id/api/wisma-atlet'
   }

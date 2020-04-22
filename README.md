@@ -6,7 +6,7 @@
 Corona Notifier is a Whatsapp automatic notification robot using MQTT, nodeJS & MongoDB. The Corona Service will collect latest data about the COVID-19 indonesian case from [indonesia-covid-19-api](https://indonesia-covid-19.mathdro.id/api) by [mathdroid](https://github.com/mathdroid/indonesia-covid-19-api) 
 
 #### The Diagram
-![Diagram](Diagram.png)
+![Diagram](image/Diagram.png)
 
 
 ## Getting Started

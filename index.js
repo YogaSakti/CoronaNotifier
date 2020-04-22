@@ -16,13 +16,14 @@ let {
     getDataUsers,
     getAllDataUsers,
     DB
-} = require('./CoronaService/db')
+} = require('./helper/db')
 
 const moment = require('moment-timezone')
 const qrcode = require('qrcode-terminal')
 const mqtt = require('mqtt')
 const listen = mqtt.connect(process.env.MQTT_URL)
-const resChat = require('./chat')
+const resChat = require('./helper/message')
+const adminNumber = `${process.env.ADMIN_NUMBER}@c.us`
 
 const SESSION_FILE_PATH = './session.json'
 let sessionCfg
@@ -141,21 +142,33 @@ client.on('message_ack', (msg, ack) => {
     }
 })
 
-client.on('group_join', (notification) => {
+client.on('group_join', async (notification) => {
     // User has joined or been added to the group.
-    console.log('join', notification)
-    notification.reply('User joined.')
+    // console.log('join', notification)
+    // notification.reply('User joined.')
+    const contact = await notification.getContact()
+    if (notification.chatId == `${client.info.me.user}@c.us`) {
+        client.sendMessage(notification.id.remote, await resChat.Menu(contact))
+    }
 })
 
 client.on('group_leave', (notification) => {
     // User has left or been kicked from the group.
-    console.log('leave', notification)
-    notification.reply('User left.')
+    // console.log('leave', notification)
+    if (notification.chatId == `${client.info.me.user}@c.us`) {
+        notification.reply('User has left or been kicked from the group.')
+    }
 })
 
-client.on('group_update', (notification) => {
-    // Group picture, subject or description has been updated.
-    console.log('update', notification)
+client.on('change_battery', (status) => {
+    // battery changed and plugged status.
+    try {
+        if (status.battery <= 25 && !status.plugged) {
+            client.sendMessage(adminNumber, 'Please charge your phone!')
+        }
+    } catch (err) {
+        console.error(err)
+    }
 })
 
 client.on('disconnected', (reason) => {
@@ -170,9 +183,13 @@ client.on('message', async msg => {
     msg.from.includes('@g.us') ? console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Message:`, msg.from.replace('@g.us', ''), `| ${msg.type}`, msg.body ? `| ${msg.body}` : '') : ''
 
     if (msg.type == 'ciphertext' || msg.body == 'menu' || msg.body == 'info' || msg.body == 'corona' || msg.body == 'help' || msg.body == 'covid') {
-        const chat = await msg.getChat()
-        if (!chat.isGroup) {
-            msg.reply('kirim !menu atau !help untuk melihat menu honk!.')
+        try {
+            const chat = await msg.getChat()
+            if (!chat.isGroup) {
+                msg.reply('kirim !menu atau !help untuk melihat menu honk!.')
+            }
+        } catch (err) {
+            console.error(err)
         }
     } else if (msg.body == 'halo' || msg.body == 'hai' || msg.body == 'hallo' || msg.body == 'woi') {
         const chat = await msg.getChat()
@@ -181,8 +198,13 @@ client.on('message', async msg => {
         }
     } else if (msg.body == '!msg') {
         var kontak = await await msg.getContact()
-        console.log(kontak)
-        console.log(msg)
+        const chat = await msg.getChat()
+        if (chat.isGroup) {
+            console.log(chat)
+        } else {
+            console.log(kontak)
+            console.log(msg)
+        }
     } else if (msg.body == '!ping' || msg.body == 'ping' || msg.body == 'p') {
         client.sendMessage(msg.from, 'pong')
     } else if (msg.body == '!honk' || msg.body == 'honk!' || msg.body == 'honk') {
@@ -192,39 +214,14 @@ client.on('message', async msg => {
         const group = chats.filter(x => x.isGroup == true)
         const personalChat = chats.filter(x => x.isGroup == false)
         const getListUsers = await getAllDataUsers(DB)
-            client.sendMessage(msg.from, `The bot has...
+        client.sendMessage(msg.from, `The bot has...
 Chats open: ${chats.length} 
 Groups chats: ${group.length}
 Personal chats: ${personalChat.length}
 Notification User: ${getListUsers.length}`)
     } else if (msg.body == '!help' || msg.body == '!menu') {
         const contact = await msg.getContact()
-        const nama = contact.pushname !== undefined ? `Hai, ${contact.pushname} 😃` : 'Hai 😃'
-        client.sendMessage(msg.from, `
-${nama}
-kenalin aku Honk! 🤖 robot yang akan memberitahumu informasi mengenai COVID-19 di Indonesia. 
-
-*DAFTAR PERINTAH*
-!menu / !help  =>  Menampilkan menu
-!ping  =>  pong
-
-*COVID-19* 
-!covid  =>  Menu COVID-19
-!corona =>  Data COVID-19 Nasional
-!gejala  =>  Gejala COVID-19
-!inkubasi  =>  Masa Inkubasi COVID-19
-
-*NOTIFIKASI* 
-!aktif  =>  Mengaktifkan notifikasi
-!mati  =>  Mematikan notifikasi
-
-*LAIN-LAIN*
-!data => Daftar Website COVID-19 Indonesia
-!peta => Daftar Peta Sebaran COVID-19
-!sumber => Sumber data Honk
-
-
-Made with ♥️ by Yoga Sakti`)
+        client.sendMessage(msg.from, await resChat.Menu(contact))
     } else if (msg.body === '!covid' || msg.body === '!covid19' || msg.body === '!covid-19') {
         client.sendMessage(msg.from, `
 *Menu COVID-19*
@@ -233,41 +230,36 @@ Made with ♥️ by Yoga Sakti`)
 !global  =>  Data Global
 
 *Provinsi*
-!jabar  => Data Provinsi Jawa Barat
-!jateng => Data Provins Jawa Tengah
+!jabar   => Data Provinsi Jawa Barat
+!jateng  => Data Provinsi Jawa Tengah
+!jatim   => Data Provinsi Jawa Timur
+!jakarta => Data Provinsi DKI Jakarta
 
 *Kota*
 !bandung  =>  Data Kota Bandung
 !bekasi  =>  Data Kota Bekasi
-!bogor  => Data Kota Bogor
 
 *Rumah Sakit*
 !wisma-atlit => Data RS Darurat Wisma Atlit
 
-_*seluruh data yang ada adalah data terbaru._
-_*kirim !help untuk melihat menu utama._`)
+_>seluruh data yang ada adalah data terbaru._
+_>kirim *!menu* untuk melihat menu utama._`)
     } else if (msg.body == '!donasi') {
-        const logoDonasi = new MessageMedia('image/png', readFileSync('./Donasi-1.jpg', 'base64'))
-        client.sendMessage(msg.from, logoDonasi, {
-            caption: await resChat.Donasi()
-        })
-        const infoRek = new MessageMedia('image/png', readFileSync('./Donasi-2.jpg', 'base64'))
-        // delay ini menanggulangi jika terjadi delay ketika mengirim gambar pertama
-        setTimeout(function () {
-            client.sendMessage(msg.from, infoRek)
-        }, 500)
+        // const logoDonasi = new MessageMedia('image/png', readFileSync('./image/Donasi-1.jpg', 'base64'))
+        // client.sendMessage(msg.from, logoDonasi, { caption: await resChat.Donasi() })
+        // const infoRek = new MessageMedia('image/png', readFileSync('./image/Donasi-2.jpg', 'base64'))
+        // // delay ini menanggulangi jika terjadi delay ketika mengirim gambar pertama
+        // setTimeout(function () { client.sendMessage(msg.from, infoRek) }, 500)
     } else if (msg.body == '!sumber') {
         client.sendMessage(msg.from, await resChat.SumberData())
     } else if (msg.body == '!peta') {
-        client.sendMessage(msg.from, await resChat.PetaProv())
+        client.sendMessage(msg.from, await resChat.PetaProv(), { linkPreview: true })
     } else if (msg.body == '!data') {
         client.sendMessage(msg.from, await resChat.DataNasional())
     } else if (msg.body == '!bandung') {
         client.sendMessage(msg.from, await resChat.Bandung())
     } else if (msg.body == '!bekasi') {
         client.sendMessage(msg.from, await resChat.Bekasi())
-    } else if (msg.body == '!bogor') {
-        client.sendMessage(msg.from, await resChat.Bogor())
     } else if (msg.body == '!corona' || msg.body == '!nasional') {
         client.sendMessage(msg.from, await resChat.Nasional())
     } else if (msg.body == '!global') {
@@ -276,6 +268,10 @@ _*kirim !help untuk melihat menu utama._`)
         client.sendMessage(msg.from, await resChat.Jabar())
     } else if (msg.body == '!jateng') {
         client.sendMessage(msg.from, await resChat.Jateng())
+    } else if (msg.body == '!jatim') {
+        client.sendMessage(msg.from, await resChat.Jatim())
+    } else if (msg.body == '!jakarta') {
+        client.sendMessage(msg.from, await resChat.Jakarta())
     } else if (msg.body == '!wisma-atlit') {
         client.sendMessage(msg.from, await resChat.WismaAtlit())
     } else if (msg.body == '!inkubasi') {
@@ -291,25 +287,27 @@ _*kirim !help untuk melihat menu utama._`)
             await insertDataUsers(DB, chat.isGroup ? msg.from = msg.author : msg.from = msg.from)
             await client.sendMessage(msg.from, `Selamat, nomor hp anda "${msg.from.split('@c.us')[0]}" berhasil diregistrasi kedalam daftar notifikasi, anda akan mendapat notifikasi ketika ada pembaruan data.`)
         } else {
-            await client.sendMessage(msg.from, `Maaf, nomor hp anda "${msg.from.split('@c.us')[0]}" telah diregistrasi. Untuk membatalkan kirim *!mati*`)
+            await client.sendMessage(msg.from, 'Maaf, nomor hp anda telah diregistrasi. Untuk membatalkan kirim *!mati*')
         }
     } else if (msg.body == '!mati') {
         const chat = await msg.getChat()
         const dbDataUsers = await getDataUsers(DB, chat.isGroup ? msg.from = msg.author : msg.from = msg.from)
         if (msg.body && dbDataUsers.length < 1) {
-            await client.sendMessage(msg.from, 'maaf, Nomor anda belum diregistrasi. Registrasi nomor anda dengan kirim *!aktif*')
+            await client.sendMessage(msg.from, 'Maaf, Nomor anda belum diregistrasi. Registrasi nomor anda dengan kirim *!aktif*')
         } else {
             await deleteDataUsers(DB, chat.isGroup ? msg.from = msg.author : msg.from = msg.from)
             await client.sendMessage(msg.from, 'Nomor anda telah dihapus dari daftar notifikasi')
         }
 
         // ============================================= Groups
-    } else if (msg.body == '!leave' && msg.from == process.env.ADMIN_NUMBER) {
-        const chat = await msg.getChat()
-        if (chat.isGroup) {
-            chat.leave()
-        } else {
-            msg.reply('This command can only be used in a group!')
+    } else if (msg.body == '!leave') {
+        if (msg.from == adminNumber) {
+            const chat = await msg.getChat()
+            if (chat.isGroup) {
+                chat.leave()
+            } else {
+                msg.reply('This command can only be used in a group!')
+            }
         }
         // Leave from all group
         // const chats = await client.getChats()
@@ -320,7 +318,7 @@ _*kirim !help untuk melihat menu utama._`)
         //     console.log(`Keluar dari Grup: ${except[i].name}`)
         //     except[i].leave()
         // }
-    } else if (msg.body.startsWith('!join ') && msg.from == process.env.ADMIN_NUMBER) {
+    } else if (msg.body.startsWith('!join ') && msg.from == adminNumber) {
         const inviteCode = msg.body.split(' ')[1]
         try {
             await client.acceptInvite(inviteCode)
@@ -328,7 +326,7 @@ _*kirim !help untuk melihat menu utama._`)
         } catch (e) {
             msg.reply('That invite code seems to be invalid.')
         }
-    } else if (msg.body.startsWith('!sendto ' && msg.from == process.env.ADMIN_NUMBER)) {
+    } else if (msg.body.startsWith('!sendto ' && msg.from == adminNumber)) {
         let number = msg.body.split(' ')[1]
         const messageIndex = msg.body.indexOf(number) + number.length
         const message = msg.body.slice(messageIndex, msg.body.length)
@@ -341,15 +339,15 @@ _*kirim !help untuk melihat menu utama._`)
             chat.sendSeen()
             client.sendMessage(number, message)
         }
-    } else if (msg.body == '!broadcast' && msg.from == process.env.ADMIN_NUMBER) {
-    const getListUsers = await getAllDataUsers(DB)
-    getListUsers.map((item, index) => {
-        const number = item.phone_number
-                setTimeout(async function () {
-                    console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Send Broadcast to ${number}`)
-                    client.sendMessage(number, await resChat.Broadcast())
-                }, index * 2000) // Delay 2 Sec
-            })
+    } else if (msg.body == '!broadcast' && msg.from == adminNumber) {
+        const getListUsers = await getAllDataUsers(DB)
+        getListUsers.map((item, index) => {
+            const number = item.phone_number
+            setTimeout(async function () {
+                console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Send Broadcast to ${number}`)
+                client.sendMessage(number, await resChat.Broadcast())
+            }, index * 2000) // Delay 2 Sec
+        })
     }
 })
 
@@ -368,6 +366,10 @@ listen.on('message', async (topic, message) => {
 *COVID-19 Update!!*
 Negara: ${localData.Country}
 Hari Ke: ${localData.Day}
+Provinsi Terdampak: ${localData.ProvinsiTerdampak}
+
+Total ODP: ${localData.TotalODP.toLocaleString()}
+Total PDP: ${localData.TotalPDP.toLocaleString()}
 
 Total Kasus: ${localData.TotalCases}
 *Kasus Baru: ${localData.NewCases}*
@@ -385,7 +387,7 @@ Presentase Meninggal: ${localData.PresentaseDeath}
                     
 Di Perbarui Pada: 
 ${localData.lastUpdate}
-Sumber: 
+🛈 Sumber: 
 _https://www.covid19.go.id_
                     `)
 

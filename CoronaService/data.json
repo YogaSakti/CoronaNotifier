@@ -1,1 +1,18 @@
-{"Country":"Indonesia","Day":33,"TotalCases":1986,"NewCases":"+196","ActiveCases":1671,"NewActiveCases":"+163","TotalDeaths":181,"NewDeaths":"+11","TotalRecovered":134,"NewRecovered":"+22","PresentaseRecovered":"6.75%","PresentaseDeath":"9.11%","lastUpdate":"Sabtu, 4 April 2020 | 12.21 WIB"}
+{
+    "Country": "Indonesia",
+    "Day": 52,
+    "ProvinsiTerdampak": 34,
+    "TotalODP": 193571,
+    "TotalPDP": 17754,
+    "TotalCases": 7418,
+    "NewCases": "+283",
+    "ActiveCases": 5870,
+    "NewActiveCases": "+193",
+    "TotalDeaths": 635,
+    "NewDeaths": "+19",
+    "TotalRecovered": 913,
+    "NewRecovered": "+71",
+    "PresentaseRecovered": "12.31%",
+    "PresentaseDeath": "8.56%",
+    "lastUpdate": "Rabu, 22 April 2020 | 16.57 WIB"
+}

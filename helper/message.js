@@ -1,29 +1,75 @@
 /* eslint-disable no-async-promise-executor */
 const {
-    readFile,
-    writeFile
+    readFile
 } = require('fs')
+
+const path = require('path')
 
 const {
     getGlobal,
     getBandung,
-    getBogor,
     getBekasi,
+    getJatim,
     getJabar,
     getJateng,
-    getWismaAtlit
-} = require('./CoronaService/fetcher')
+    getjakarta,
+    getWismaAtlit,
+    getProv
+} = require('../util/fetcher')
 const moment = require('moment-timezone')
+moment.locale('id')
+
+async function chatMenu (contact) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const nama = contact.pushname !== undefined ? `Hai, ${contact.pushname} 😃` : 'Hai 😃'
+            const message = `${nama}
+kenalin aku Honk! 🤖 robot yang akan memberitahumu informasi mengenai COVID-19 di Indonesia. 
+
+*DAFTAR PERINTAH*
+!menu / !help  =>  Menampilkan menu
+!ping  =>  pong
+
+*COVID-19* 
+!covid  =>  Menu COVID-19
+!corona =>  Data COVID-19 Nasional
+!gejala  =>  Gejala COVID-19
+!inkubasi  =>  Masa Inkubasi COVID-19
+
+*NOTIFIKASI* 
+!aktif  =>  Mengaktifkan notifikasi
+!mati  =>  Mematikan notifikasi
+
+*LAIN-LAIN*
+!data => Daftar Website COVID-19 Indonesia
+!peta => Daftar Website Sebaran COVID-19
+!sumber => Sumber data Honk
+
+
+Made with ♥️ by Yoga Sakti`
+            resolve(message)
+        } catch (error) {
+            reject(error)
+        }
+    })
+};
 
 async function chatNasional () {
     return new Promise(async (resolve, reject) => {
-        readFile('./CoronaService/data.json', 'utf-8', function (err, data) {
-            if (err) throw err
-            const localData = JSON.parse(data)
-            const message = `
+        try {
+            const dataProv = await getProv()
+            const filePath = path.join(__dirname, '../CoronaService/data.json')
+            readFile(filePath, 'utf-8', function (err, data) {
+                if (err) return console.log(err)
+                const localData = JSON.parse(data)
+                const message = `
 *DATA COVID-19*
 Negara: ${localData.Country}
 Hari Ke: ${localData.Day}
+Provinsi Terdampak: ${localData.ProvinsiTerdampak}
+
+Total ODP: ${localData.TotalODP.toLocaleString()}
+Total PDP: ${localData.TotalPDP.toLocaleString()}
 
 Total Kasus: ${localData.TotalCases}
 *Kasus Baru: ${localData.NewCases}*
@@ -42,9 +88,13 @@ Presentase Meninggal: ${localData.PresentaseDeath}
 Pembaruan Terakhir: 
 ${localData.lastUpdate}
 
-_*kirim *!covid* untuk melihat menu data lain._`
-            resolve(message)
-        })
+_>kirim *!covid* untuk melihat menu data lain._
+_>kirim *!menu* untuk melihat menu utama._`
+                resolve(message)
+            })
+        } catch (error) {
+            reject(error)
+        }
     })
 };
 
@@ -94,38 +144,39 @@ Total PDP: ${parsedData.pdp}
 
 *Positif COVID-19*
 Total Positif: ${parsedData.total_positif}
+Sembuh: ${parsedData.positif_sembuh}
 
 Terakhir Diperbarui Pada: 
 ${parsedData.last_update}`
     return message
 };
 
-async function chatBogor () {
-    const parsedData = await getBogor()
+async function chatJatim () {
+    const parsedData = await getJatim()
     const message = `
 *DATA COVID-19*
-Kota: Bogor
+Provinsi: Jawa Timur
 
 *ODP*
-Proses Pemantauan: ${parsedData.odp_dirawat}
-Selesai Pemantauan: ${parsedData.odp_selesai}
-Total ODP: ${parsedData.odp}
+Proses Pemantauan: ${parsedData.odp_pantau.toLocaleString()}
+Selesai Pemantauan: ${parsedData.odp_selesai.toLocaleString()}
+Total ODP: ${parsedData.odp.toLocaleString()}
 
 *PDP*
-Masih Dirawat: ${parsedData.pdp_dirawat}
-Pulang dan Sehat: ${parsedData.pdp_sembuh}
-Meninggal: ${parsedData.pdp_meninggal}
-Total PDP: ${parsedData.pdp}
+Masih Dirawat: ${parsedData.pdp_dirawat.toLocaleString()}
+Pulang dan Sehat: ${parsedData.pdp_sehat.toLocaleString()}
+Meninggal: ${parsedData.pdp_meninggal.toLocaleString()}
+Total PDP: ${parsedData.pdp.toLocaleString()}
 
 *Positif COVID-19*
-Dirawat: ${parsedData.positif_dirawat}
-Sembuh: ${parsedData.positif_sembuh}
-Meninggal: ${parsedData.posituf_meninggal}
-Total Positif: ${parsedData.total_positif}
+Dirawat: ${parsedData.confirm_dirawat.toLocaleString()}
+Sembuh: ${parsedData.sembuh.toLocaleString()}
+Meninggal: ${parsedData.meninggal.toLocaleString()}
+Total Positif: ${parsedData.confirm.toLocaleString()}
 
 Terakhir Diperbarui Pada:
-${parsedData.last_update} WIB
-Sumber: ${parsedData.sumber}`
+${parsedData.updated_at} WIB
+Sumber: JATIM TANGGAP COVID-19`
     return message
 };
 
@@ -135,24 +186,31 @@ async function chatJabar () {
 *DATA COVID-19*
 Provinsi: Jawa Barat
 
+*RDT (Rapid Diagnostic Test)*
+Reaktif: ${parsedData.rdt.positif.toLocaleString()}
+Non Reaktif: ${parsedData.rdt.negatif.toLocaleString()}
+Invalid: ${parsedData.rdt.invalid.toLocaleString()}
+Total RDT: ${parsedData.rdt.total.toLocaleString()}
+
 *ODP*
-Proses Pemantauan: ${parsedData.proses_pemantauan}
-Selesai Pemantauan: ${parsedData.selesai_pemantauan}
-Total ODP: ${parsedData.total_odp}
+Proses Pemantauan: ${parsedData.odp_proses.toLocaleString()}
+Selesai Pemantauan: ${parsedData.odp_selesai.toLocaleString()}
+Total ODP: ${parsedData.odp_total.toLocaleString()}
 
 *PDP*
-Proses Pengawasan: ${parsedData.proses_pengawasan}
-Selesai Pengawasan: ${parsedData.selesai_pengawasan}
-Total PDP: ${parsedData.total_pdp}
+Proses Pengawasan: ${parsedData.pdp_proses.toLocaleString()}
+Selesai Pengawasan: ${parsedData.pdp_selesai.toLocaleString()}
+Total PDP: ${parsedData.pdp_total.toLocaleString()}
 
 *Positif COVID-19*
-Dirawat: ${parsedData.total_positif_saat_ini - parsedData.total_meninggal - parsedData.total_sembuh}
-Sembuh: ${parsedData.total_sembuh}
-Meninggal: ${parsedData.total_meninggal}
-Total Positif:${parsedData.total_positif_saat_ini}
+Dirawat: ${parsedData.positif - parsedData.meninggal - parsedData.sembuh}
+Sembuh: ${parsedData.sembuh}
+Meninggal: ${parsedData.meninggal}
+Total Positif:${parsedData.positif.toLocaleString()}
 
 Terakhir Diperbarui Pada: 
-${parsedData.tanggal}`
+${moment().format('L').replace(/\//g, '-')}
+Sumber: Pusat Informasi & Koordinasi COVID-19 Provinsi Jawa Barat`
     return message
 };
 
@@ -171,12 +229,41 @@ Total PDP: ${parsedData.pdp}
 *Positif COVID-19*
 Dirawat: ${parsedData.positif_dirawat}
 Sembuh: ${parsedData.positif_sembuh}
-Meninggal: ${parsedData.posituf_meninggal}
+Meninggal: ${parsedData.positif_meninggal}
 Total Positif: ${parsedData.total_positif}
 
 Terakhir Diperbarui Pada: 
 ${parsedData.last_update}
 Sumber: ${parsedData.sumber}`
+    return message
+};
+
+async function chatJakarta () {
+    const parsedData = await getjakarta()
+    const message = `
+*DATA COVID-19*
+Provinsi: DKI Jakarta
+
+*ODP*
+Proses Pemantauan: ${parsedData.Proses_Pemantauan}
+Selesai Pemantauan: ${parsedData.Selesai_Pemantauan}
+Total ODP: ${parsedData.Total_ODP}
+
+*PDP*
+Masih Dirawat: ${parsedData.Masih_Dirawat}
+Pulang dan Sehat: ${parsedData.Pulang_dan_Sehat}
+Total PDP: ${parsedData.Total_PDP}
+
+*Positif COVID-19*
+Dirawat: ${parsedData.Dirawat}
+Sembuh: ${parsedData.Sembuh}
+Meninggal: ${parsedData.Total_Meninggal}
+Isolasi Mandiri: ${parsedData.Self_Isolation}
+Total Positif: ${parsedData.Total_Positif}
+
+Terakhir Diperbarui Pada: 
+${moment(parsedData.Date_update).format('dddd, D MMMM YYYY').toString()}
+Sumber: Jakarta Tanggap COVID19`
     return message
 };
 
@@ -225,128 +312,37 @@ ${moment().tz('Asia/Jakarta').format('LLLL').replace('pukul', '|')} WIB`
 
 async function chatPetaProv () {
     const message = `
-Daftar Peta Sebaran COVID-19
+*Daftar Website Sebaran COVID-19*
 
-Peta Nasional
-- _https://www.covid19.go.id/situasi-virus-corona_
+Maaf dikarenakan daftar website sebaran terlalu banyak 🤖 honk tidak dapat menampilkannya dichat ini, untuk itu kamu bisa melihat daftarnya melalui link di bawah ini 🙂.
 
-*PULAU JAWA*
-1. Banten
-- _https://infocorona.bantenprov.go.id/covid-19/topic/5_
-2. DI Yogyakarta
-- _http://corona.jogjaprov.go.id_
-Kab. Bantul
-- _https://corona.bantulkab.go.id_
-3. DKI Jakarta
-- _https://corona.jakarta.go.id_
-4. Jawa Barat
-- _https://pikobar.jabarprov.go.id_
-Kota Bandung
-- _https://covid19.bandung.go.id_
-Kab. Bandung Barat
-- _https://pik.bandungbaratkab.go.id_
-Kota Bekasi
-- _http://corona.bekasikota.go.id_
-Kota Bogor
-- _http://covid19.kotabogor.go.id_
-Kota Depok
-- _https://ccc-19.depok.go.id_
-Kota Tangerang
-- _https://covid19.tangerangkota.go.id_
-5. Jawa Tengah
-- _http://corona.jatengprov.go.id_
-Kab. Demak
-- _http://corona.demakkab.go.id_
-Kab. Kudus
-- _https://corona.kuduskab.go.id_
-Kab. Jepara
-- _http://corona.jepara.go.id_
-Kab. Magelang
-- _http://infocorona.magelangkab.go.id_
-Kota Semarang
-- _http://siagacorona.semarangkota.go.id_
-Kab. Wonosobo
-- _https://corona.wonosobokab.go.id_
-6. Jawa Timur
-- _http://checkupcovid19.jatimprov.go.id_
-Kab. Kediri
-- _http://covid19.kedirikab.go.id_
-Kota Malang
-- _https://malangkota.go.id/tag/virus-corona_
-Kota Probolinggo
-- _https://portal.probolinggokota.go.id/index.php/tanggap-corona_
-Kab. Probolinggo
-- _https://siagacovid19.probolinggokab.go.id_
-Kab. Tuban
-- _https://tubankab.go.id/page/informasi-tentang-virus-corona-covid-19_
-
-*PULAU SUMATERA*
-1. Aceh
-- _https://dinkes.acehprov.go.id_
-2. Kepulauan Riau
-- _http://corona.kepriprov.go.id_
-Kota Batam
-- _https://lawancorona.batam.go.id_
-3. Kepulauan Bangka Belitung:
-Kab. Bel. Timur
-- _http://corona.belitungtimurkab.go.id_
-3. Lampung
-- _http://geoportal.lampungprov.go.id/corona_
-4. Riau
-- _https://corona.riau.go.id_
-5. Sumatera Utara
-Kota Binjai
-- _http://binjaimelawancovid19.binjaikota.go.id_
-Kab. Deli Serdang
-- _http://covid19.deliserdangkab.go.id_
-Kab. Langkat
-- _https://coronainfo.langkatkab.go.id_
-Kab. Tebing Tinggi
-- _https://covid19.tebingtinggikota.go.id_
-6. Sumatera Barat
-- _http://corona.sumbarprov.go.id_
-
-*BALI & KEP. NUSA TENGGARA*
-1. Bali
-- _https://www.diskes.baliprov.go.id_
-2. NTB
-- _https://corona.ntbprov.go.id_
-
-*PULAU KALIMANTAN*
-1. Kalimantan Barat
-Kab. Ketapang
-- _https://covid19.ketapangkab.go.id_
-
-*PULAU SULAWESI*
-1. Gorontalo
-Kota Gorontalo
-- _http://corona.gorontalokota.go.id_
-2. Sulawesi Selatan
-- _https://covid19.sulselprov.go.id_
-Kab. MuBa
-- _https://covid19.mubakab.go.id_
-3. Sulawesi Utara: 
-Kota Manado 
-- _https://covid19.manadokota.go.id_
-Kab. Bolaang
-- _http://covid19.bolmongkab.go.id_
-    
-
-Jika ada peta lain tolong beritahukan 🙂
+_https://kawalcovid19.id/pemerintah-daerah_
 `
     return message
 };
 
 async function chatDataNasional () {
     const message = `
-Daftar Data Sebaran COVID-19 
+Daftar Website Penting Perihal COVID-19 
 
-Data Nasional
+Situs Resmi Pemerintah untuk COVID-19
 - _https://www.covid19.go.id_
-- _https://covid-monitoring.kemkes.go.id_
+
+Peta Kasus COVID-19 di Indonesia
+- _https://kcov.id/petapositif_
+
+Peta Rumah Sakit Rujukan di Indonesia
+- _https://kawalcovid19.maps.arcgis.com/apps/opsdashboard/index.html#/8caa437261f2440093ce28e33e3ba6dd_
+
+WHO Covid-19
+- _https://www.who.int/emergencies/diseases/novel-coronavirus-2019_
+
+UNICEF Indonesia
+- _https://www.unicef.org/indonesia/id/coronavirus_
 
 Data RS Darurat Wisma Atlit
 - _https://u071.zicare.id/house/status_
+
 `
     return message
 };
@@ -355,8 +351,7 @@ async function chatSumberData () {
     const message = `
 Sumber: 
 1. _https://www.covid19.go.id_
-2. _https://indonesia-covid-19.mathdro.id/api_
-3. _https://kawalcovid19.id_`
+2. _https://indonesia-covid-19.mathdro.id/api_`
 
     return message
 };
@@ -435,14 +430,16 @@ Sebagian besar (81%) dari kasus penyakit coronavirus ini adalah kasus ringan. Ka
 // };
 
 module.exports = {
+    Menu: chatMenu,
     Nasional: chatNasional,
     Global: chatGlobal,
     WismaAtlit: chatWismaAtlit,
     Bandung: chatBandung,
     Bekasi: chatBekasi,
-    Bogor: chatBogor,
+    Jatim: chatJatim,
     Jabar: chatJabar,
     Jateng: chatJateng,
+    Jakarta: chatJakarta,
     PetaProv: chatPetaProv,
     DataNasional: chatDataNasional,
     SumberData: chatSumberData,
