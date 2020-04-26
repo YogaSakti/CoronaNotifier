@@ -38,14 +38,10 @@ Edit .env file:
 ```
 MQTT_URL=mqtt://
 MQTT_TOPIC=
-ADMIN_NUMBER= <number>@c.us
-```
-Edit db.js file:
-
-```
-const DB_URL = 'mongodb+srv://'
-const DB_NAME = 
-const DB_COLLECTION =
+ADMIN_NUMBER= <number>
+DB_URL = 'mongodb+srv://'
+DB_NAME = 
+DB_COLLECTION =
 ```
 
 ### Usage
