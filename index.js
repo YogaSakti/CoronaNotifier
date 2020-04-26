@@ -1,10 +1,10 @@
 require('dotenv').config()
+const os = require('os')
 const {
     readFile,
     writeFile,
     existsSync,
-    readFileSync,
-    unlink
+    readFileSync
 } = require('fs')
 const {
     Client,
@@ -17,13 +17,13 @@ let {
     getAllDataUsers,
     DB
 } = require('./helper/db')
+const { getAll } = require('./util/location')
 
 const moment = require('moment-timezone')
 const qrcode = require('qrcode-terminal')
 const mqtt = require('mqtt')
 const listen = mqtt.connect(process.env.MQTT_URL)
 const resChat = require('./helper/message')
-const adminNumber = `${process.env.ADMIN_NUMBER}@c.us`
 
 const SESSION_FILE_PATH = './session.json'
 let sessionCfg
@@ -31,12 +31,18 @@ if (existsSync(SESSION_FILE_PATH)) {
     sessionCfg = require(SESSION_FILE_PATH)
 }
 
+const config = {
+    online: true,
+    admin: `${process.env.ADMIN_NUMBER}@c.us`,
+    bot: `${process.envBOT_NUMBER}@c.us`
+}
+
+const path = os.platform() == 'win32' ? 'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe' : '/usr/bin/google-chrome-stable'
 const client = new Client({
     puppeteer: {
+        executablePath: path,
         args: [
-            '--headless',
             '--log-level=3', // fatal only
-            '--start-maximized',
             '--no-default-browser-check',
             '--disable-infobars',
             '--disable-web-security',
@@ -60,7 +66,11 @@ const client = new Client({
 })
 // You can use an existing session and avoid scanning a QR code by adding a "session" object to the client options.
 
-client.initialize()
+client.initialize({
+    qrTimeoutMs: 0,
+    authTimeoutMs: 0,
+    restartOnAuthFail: true
+})
 
 // ======================= Begin initialize WAbot
 
@@ -74,7 +84,6 @@ client.on('qr', (qr) => {
 
 client.on('authenticated', (session) => {
     console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Authenticated Success.`)
-    // console.log(session);
     sessionCfg = session
     writeFile(SESSION_FILE_PATH, JSON.stringify(session), function (err) {
         if (err) {
@@ -86,11 +95,6 @@ client.on('authenticated', (session) => {
 client.on('auth_failure', msg => {
     // Fired if session restore was unsuccessfull
     console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] AUTHENTICATION FAILURE \n ${msg}`)
-    unlink('./session.json', function (err) {
-        if (err) return console.log(err)
-        console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Session Deleted, Please Restart!`)
-        process.exit(1)
-    })
 })
 
 client.on('ready', async () => {
@@ -108,53 +112,25 @@ listen.on('connect', () => {
     })
 })
 
-listen.on('message', (topic, message) => {
-    // console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Message: ${message.toString()}`)
-})
 // ======================= WaBot Listen on Event
 
 client.on('message_revoke_everyone', async (after, before) => {
     // Fired whenever a message is deleted by anyone (including you)
-    // console.log(after); // message after it was deleted.
     if (before) {
         console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Revoked: ${before.body}`) // message before it was deleted.
     }
 })
 
-client.on('message_revoke_me', async (msg) => {
-    // Fired whenever a message is only deleted in your own view.
-    // console.log(msg.body); // message before it was deleted.
-})
-
-client.on('message_ack', (msg, ack) => {
-    /*
-          == ACK VALUES ==
-          ACK_ERROR: -1
-          ACK_PENDING: 0
-          ACK_SERVER: 1
-          ACK_DEVICE: 2
-          ACK_READ: 3
-          ACK_PLAYED: 4
-      */
-
-    if (ack == 3) {
-        // The message was read
-    }
-})
-
 client.on('group_join', async (notification) => {
-    // User has joined or been added to the group.
-    // console.log('join', notification)
     // notification.reply('User joined.')
-    const contact = await notification.getContact()
-    if (notification.chatId == `${client.info.me.user}@c.us`) {
-        client.sendMessage(notification.id.remote, await resChat.Menu(contact))
-    }
+    //     const contact = await notification.getContact()
+    //     if (notification.chatId == `${client.info.me.user}@c.us`) {
+    //         client.sendMessage(notification.id.remote, await resChat.Menu(contact))
+    //     }
 })
 
 client.on('group_leave', (notification) => {
     // User has left or been kicked from the group.
-    // console.log('leave', notification)
     if (notification.chatId == `${client.info.me.user}@c.us`) {
         notification.reply('User has left or been kicked from the group.')
     }
@@ -164,7 +140,7 @@ client.on('change_battery', (status) => {
     // battery changed and plugged status.
     try {
         if (status.battery <= 25 && !status.plugged) {
-            client.sendMessage(adminNumber, 'Please charge your phone!')
+            client.sendMessage(config.admin, 'Please charge your phone!')
         }
     } catch (err) {
         console.error(err)
@@ -178,176 +154,223 @@ client.on('disconnected', (reason) => {
 // ======================= WaBot Listen on message
 
 client.on('message', async msg => {
-    msg.body = msg.body.toLowerCase()
-    msg.from.includes('@c.us') ? console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Message:`, msg.from.replace('@c.us', ''), `| ${msg.type}`, msg.body ? `| ${msg.body}` : '') : ''
-    msg.from.includes('@g.us') ? console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Message:`, msg.from.replace('@g.us', ''), `| ${msg.type}`, msg.body ? `| ${msg.body}` : '') : ''
+    if (msg.from.includes('@c.us') && msg.type == 'chat') console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Message:`, msg.from.replace('@c.us', ''), `| ${msg.type} | `, msg.body)
+    if (msg.from.includes('@g.us') && msg.type == 'chat') console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Message:`, msg.from.replace('@g.us', ''), `| ${msg.type} | `, msg.body)
 
-    if (msg.type == 'ciphertext' || msg.body == 'menu' || msg.body == 'info' || msg.body == 'corona' || msg.body == 'help' || msg.body == 'covid') {
-        try {
+    const keyword = ['menu', 'info', 'corona', 'help', 'covid', 'aktif', '!info', 'halo', 'hai', 'hallo', '!ping', 'p', '!honk', 'honk!', 'honk', '!help', '!menu', '!covid', '!covid19', '!covid-19', '!inkubasi', '!gejala', '!peta', '!data', '!sumber', '!global', '!corona', '!nasional', '!jabar', '!jateng', '!jatim', '!jakarta', '!bandung', '!bekasi', '!wisma-atlit', '!aktif', '!mati', '!lokasi']
+
+    const text = msg.body.toLowerCase()
+
+    if (config.online && keyword.includes(text)) {
+        // General Chat
+        if (['menu', 'info', 'corona', 'help', 'covid', 'aktif', '!info'].includes(text)) {
             const chat = await msg.getChat()
-            if (!chat.isGroup) {
-                msg.reply('kirim !menu atau !help untuk melihat menu honk!.')
-            }
-        } catch (err) {
-            console.error(err)
-        }
-    } else if (msg.body == 'halo' || msg.body == 'hai' || msg.body == 'hallo' || msg.body == 'woi') {
-        const chat = await msg.getChat()
-        if (!chat.isGroup) {
-            msg.reply('hi 😃')
-        }
-    } else if (msg.body == '!msg') {
-        var kontak = await await msg.getContact()
-        const chat = await msg.getChat()
-        if (chat.isGroup) {
-            console.log(chat)
-        } else {
-            console.log(kontak)
-            console.log(msg)
-        }
-    } else if (msg.body == '!ping' || msg.body == 'ping' || msg.body == 'p') {
-        client.sendMessage(msg.from, 'pong')
-    } else if (msg.body == '!honk' || msg.body == 'honk!' || msg.body == 'honk') {
-        client.sendMessage(msg.from, 'Honk Honk!!')
-    } else if (msg.body == '!chats') {
-        const chats = await client.getChats()
-        const group = chats.filter(x => x.isGroup == true)
-        const personalChat = chats.filter(x => x.isGroup == false)
-        const getListUsers = await getAllDataUsers(DB)
-        client.sendMessage(msg.from, `The bot has...
-Chats open: ${chats.length} 
-Groups chats: ${group.length}
-Personal chats: ${personalChat.length}
-Notification User: ${getListUsers.length}`)
-    } else if (msg.body == '!help' || msg.body == '!menu') {
-        const contact = await msg.getContact()
-        client.sendMessage(msg.from, await resChat.Menu(contact))
-    } else if (msg.body === '!covid' || msg.body === '!covid19' || msg.body === '!covid-19') {
-        client.sendMessage(msg.from, `
-*Menu COVID-19*
-
-!nasional  =>  Data Nasional
-!global  =>  Data Global
-
-*Provinsi*
-!jabar   => Data Provinsi Jawa Barat
-!jateng  => Data Provinsi Jawa Tengah
-!jatim   => Data Provinsi Jawa Timur
-!jakarta => Data Provinsi DKI Jakarta
-
-*Kota*
-!bandung  =>  Data Kota Bandung
-!bekasi  =>  Data Kota Bekasi
-
-*Rumah Sakit*
-!wisma-atlit => Data RS Darurat Wisma Atlit
-
-_>seluruh data yang ada adalah data terbaru._
-_>kirim *!menu* untuk melihat menu utama._`)
-    } else if (msg.body == '!donasi') {
-        // const logoDonasi = new MessageMedia('image/png', readFileSync('./image/Donasi-1.jpg', 'base64'))
-        // client.sendMessage(msg.from, logoDonasi, { caption: await resChat.Donasi() })
-        // const infoRek = new MessageMedia('image/png', readFileSync('./image/Donasi-2.jpg', 'base64'))
-        // // delay ini menanggulangi jika terjadi delay ketika mengirim gambar pertama
-        // setTimeout(function () { client.sendMessage(msg.from, infoRek) }, 500)
-    } else if (msg.body == '!sumber') {
-        client.sendMessage(msg.from, await resChat.SumberData())
-    } else if (msg.body == '!peta') {
-        client.sendMessage(msg.from, await resChat.PetaProv(), { linkPreview: true })
-    } else if (msg.body == '!data') {
-        client.sendMessage(msg.from, await resChat.DataNasional())
-    } else if (msg.body == '!bandung') {
-        client.sendMessage(msg.from, await resChat.Bandung())
-    } else if (msg.body == '!bekasi') {
-        client.sendMessage(msg.from, await resChat.Bekasi())
-    } else if (msg.body == '!corona' || msg.body == '!nasional') {
-        client.sendMessage(msg.from, await resChat.Nasional())
-    } else if (msg.body == '!global') {
-        client.sendMessage(msg.from, await resChat.Global())
-    } else if (msg.body == '!jabar') {
-        client.sendMessage(msg.from, await resChat.Jabar())
-    } else if (msg.body == '!jateng') {
-        client.sendMessage(msg.from, await resChat.Jateng())
-    } else if (msg.body == '!jatim') {
-        client.sendMessage(msg.from, await resChat.Jatim())
-    } else if (msg.body == '!jakarta') {
-        client.sendMessage(msg.from, await resChat.Jakarta())
-    } else if (msg.body == '!wisma-atlit') {
-        client.sendMessage(msg.from, await resChat.WismaAtlit())
-    } else if (msg.body == '!inkubasi') {
-        client.sendMessage(msg.from, await resChat.Inkubasi())
-    } else if (msg.body == '!gejala') {
-        client.sendMessage(msg.from, await resChat.Gejala())
-    } else if (msg.body == '!aktif') {
-        const chat = await msg.getChat()
-        // Cek & Input data ke MongoDB
-        const dbDataUsers = await getDataUsers(DB, chat.isGroup ? msg.from = msg.author : msg.from = msg.from)
-        if (msg.body && dbDataUsers.length < 1) {
-            dbDataUsers.push(chat.isGroup ? msg.from = msg.author : msg.from = msg.from)
-            await insertDataUsers(DB, chat.isGroup ? msg.from = msg.author : msg.from = msg.from)
-            await client.sendMessage(msg.from, `Selamat, nomor hp anda "${msg.from.split('@c.us')[0]}" berhasil diregistrasi kedalam daftar notifikasi, anda akan mendapat notifikasi ketika ada pembaruan data.`)
-        } else {
-            await client.sendMessage(msg.from, 'Maaf, nomor hp anda telah diregistrasi. Untuk membatalkan kirim *!mati*')
-        }
-    } else if (msg.body == '!mati') {
-        const chat = await msg.getChat()
-        const dbDataUsers = await getDataUsers(DB, chat.isGroup ? msg.from = msg.author : msg.from = msg.from)
-        if (msg.body && dbDataUsers.length < 1) {
-            await client.sendMessage(msg.from, 'Maaf, Nomor anda belum diregistrasi. Registrasi nomor anda dengan kirim *!aktif*')
-        } else {
-            await deleteDataUsers(DB, chat.isGroup ? msg.from = msg.author : msg.from = msg.from)
-            await client.sendMessage(msg.from, 'Nomor anda telah dihapus dari daftar notifikasi')
-        }
-
-        // ============================================= Groups
-    } else if (msg.body == '!leave') {
-        if (msg.from == adminNumber) {
+            if (!chat.isGroup) msg.sendMessage(msg.from, 'kirim !menu atau !help untuk melihat menu honk!.')
+        } else if (['halo', 'hai', 'hallo'].includes(text)) {
             const chat = await msg.getChat()
-            if (chat.isGroup) {
-                chat.leave()
+            if (!chat.isGroup) msg.sendMessage(msg.from, 'hi 😃')
+        } else if (['!ping', 'p'].includes(text)) {
+            client.sendMessage(msg.from, 'pong')
+        } else if (['!honk', 'honk!', 'honk'].includes(text)) {
+            client.sendMessage(msg.from, 'Honk Honk!!')
+        }
+
+        // Command Menu & informasi
+        if (['!help', '!menu'].includes(text)) {
+            const contact = await msg.getContact()
+            client.sendMessage(msg.from, await resChat.Menu(contact))
+        } else if (['!covid', '!covid19', '!covid-19'].includes(text)) {
+            client.sendMessage(msg.from, resChat.SubMenu())
+        } else if (text == '!inkubasi') {
+            client.sendMessage(msg.from, await resChat.Inkubasi())
+        } else if (text == '!gejala') {
+            client.sendMessage(msg.from, await resChat.Gejala())
+        } else if (text == '!peta') {
+            client.sendMessage(msg.from, await resChat.PetaProv())
+        } else if (text == '!data') {
+            client.sendMessage(msg.from, await resChat.DataNasional())
+        } else if (text == '!sumber') {
+            client.sendMessage(msg.from, await resChat.SumberData())
+        }
+
+        // Command Get Data
+        if (text == '!global') {
+            client.sendMessage(msg.from, await resChat.Global())
+        } else if (['!corona', '!nasional'].includes(text)) {
+            client.sendMessage(msg.from, await resChat.Nasional())
+        } else if (text == '!jabar') {
+            client.sendMessage(msg.from, await resChat.Jabar())
+        } else if (text == '!jateng') {
+            client.sendMessage(msg.from, await resChat.Jateng())
+        } else if (text == '!jatim') {
+            client.sendMessage(msg.from, await resChat.Jatim())
+        } else if (text == '!jakarta') {
+            client.sendMessage(msg.from, await resChat.Jakarta())
+        } else if (text == '!bandung') {
+            client.sendMessage(msg.from, await resChat.Bandung())
+        } else if (text == '!bekasi') {
+            client.sendMessage(msg.from, await resChat.Bekasi())
+        } else if (text == '!wisma-atlit') {
+            client.sendMessage(msg.from, await resChat.WismaAtlit())
+        } else if (text == '!lokasi' && msg.hasQuotedMsg) {
+            const quotedMsg = await msg.getQuotedMessage()
+            const zoneStatus = await getAll(quotedMsg.location.latitude, quotedMsg.location.longitude)
+            if (zoneStatus.kode == 200) {
+                let data = ''
+                for (let i = 0; i < zoneStatus.data.length; i++) {
+                    const x = zoneStatus.data[i]
+                    let zone = ''
+                    if (x.zone == 'green') zone = 'Hijau* (Aman) \n'
+                    if (x.zone == 'red') zone = 'Merah* (Bahaya) \n'
+                    if (x.zone == 'yellow') zone = 'Kuning* (Waspada) \n'
+                    data += `${i + 1}. Kel. *${x.region}* Berstatus *Zona ${zone}`
+                }
+                const text = `*CEK LOKASI*\nHasil pemeriksaan dari lokasi yang anda kirim adalah *${zoneStatus.status}* ${zoneStatus.optional}\n\nInformasi lokasi terdampak disekitar anda:\n${data}`
+                client.sendMessage(msg.from, text)
             } else {
-                msg.reply('This command can only be used in a group!')
+                client.sendMessage(msg.from, 'Maaf, Terjadi error ketika memeriksa lokasi yang anda kirim.')
+            }
+        } else if (text == '!lokasi') {
+            const text = '*CEK LOKASI COVID-19*\nBerikut cara untuk cek lokasimu: \n1. Kirimkan lokasimu\n2. Balas dengan kata !lokasi, lokasi yang kamu kirim tadi (klik & tahan chat lokasimu lalu pilih balas)\n3. Kamu akan mendapat informasi mengenai lokasi yang kamu kirim\n\n Jika kurang jelas silahkan lihat gambar dibawah ini.'
+            client.sendMessage(msg.from, text)
+            const tutor = new MessageMedia('image/jpg', readFileSync('./image/lokasi.jpg', 'base64'))
+            client.sendMessage(msg.from, tutor)
+        }
+
+        // Command Notification
+        if (text == '!aktif') {
+            const chat = await msg.getChat()
+            // Cek & Input data ke MongoDB
+            const dbDataUsers = await getDataUsers(DB, chat.isGroup ? msg.from = msg.author : msg.from = msg.from)
+            if (msg.body && dbDataUsers.length < 1) {
+                dbDataUsers.push(chat.isGroup ? msg.from = msg.author : msg.from = msg.from)
+                await insertDataUsers(DB, chat.isGroup ? msg.from = msg.author : msg.from = msg.from)
+                await client.sendMessage(msg.from, `Selamat, nomor hp anda "${msg.from.split('@c.us')[0]}" berhasil diregistrasi kedalam daftar notifikasi, anda akan mendapat notifikasi ketika ada pembaruan data.`)
+            } else {
+                await client.sendMessage(msg.from, 'Maaf, nomor hp anda telah diregistrasi. Untuk membatalkan kirim *!mati*')
+            }
+        } else if (text == '!mati') {
+            const chat = await msg.getChat()
+            const dbDataUsers = await getDataUsers(DB, chat.isGroup ? msg.from = msg.author : msg.from = msg.from)
+            if (msg.body && dbDataUsers.length < 1) {
+                await client.sendMessage(msg.from, 'Maaf, Nomor anda belum diregistrasi. Registrasi nomor anda dengan kirim *!aktif*')
+            } else {
+                await deleteDataUsers(DB, chat.isGroup ? msg.from = msg.author : msg.from = msg.from)
+                await client.sendMessage(msg.from, 'Nomor anda telah dihapus dari daftar notifikasi')
             }
         }
-        // Leave from all group
-        // const chats = await client.getChats()
-        // var search = chats.filter(x => x.isGroup == true)
-        // var except = search.filter(x => x.id._serialized !== 'ID')
-        // msg.reply(`Request diterima bot akan keluar dari ${except.length} grup.`)
-        // for (var i = 0; i < except.length; i++) {
-        //     console.log(`Keluar dari Grup: ${except[i].name}`)
-        //     except[i].leave()
-        // }
-    } else if (msg.body.startsWith('!join ') && msg.from == adminNumber) {
-        const inviteCode = msg.body.split(' ')[1]
-        try {
-            await client.acceptInvite(inviteCode)
-            msg.reply('Joined the group!')
-        } catch (e) {
-            msg.reply('That invite code seems to be invalid.')
+    } else if (msg.from == config.admin || config.bot) {
+        // Command Admin
+        if (text == '!online') {
+            if (config.online) {
+                client.sendMessage(msg.from, 'Bot is Online.')
+            } else {
+                config.online = online
+                client.sendMessage(msg.from, 'Bot is now Online.')
+            }
+        } else if (text == '!offline') {
+            if (!config.online) {
+                client.sendMessage(msg.from, 'Bot is Offline')
+            } else {
+                config.online = false
+                client.sendMessage(msg.from, 'Bot is now Offline')
+            }
+        } else if (text == '!status') {
+            if (config.online) {
+                client.sendMessage(msg.from, 'Bot is Online')
+            } else {
+                client.sendMessage(msg.from, 'Bot is Offline')
+            }
+        } else if (text == '!chats') {
+            const chats = await client.getChats()
+            const group = chats.filter(x => x.isGroup == true)
+            const personalChat = chats.filter(x => x.isGroup == false)
+            const getListUsers = await getAllDataUsers(DB)
+            client.sendMessage(msg.from, `The bot has...\nChats open: ${chats.length}\nGroups chats: ${group.length}\nPersonal chats: ${personalChat.length}\nNotification User: ${getListUsers.length}`)
+        } else if (text == '!broadcast') {
+            const getListUsers = await getAllDataUsers(DB)
+            getListUsers.map((item, index) => {
+                const number = item.phone_number
+                setTimeout(async function () {
+                    console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Send Broadcast to ${number} (${index})`)
+                    client.sendMessage(number, await resChat.Broadcast())
+                }, index * 500)
+            })
+        } else if (text == '!dbcheck') {
+            const getListUsers = await getAllDataUsers(DB)
+            const UnRegist = []
+            const getUnRegist = await Promise.all(getListUsers.map(async (item, index) => {
+                const cekUser = await client.isRegisteredUser(item.phone_number)
+                return {
+                    number: item.phone_number,
+                    status: cekUser
+                }
+            }))
+            getUnRegist.map(x => {
+                if (x.status == false) UnRegist.push(x.number)
+            })
+            if (UnRegist.length !== 0) {
+                await client.sendMessage(msg.from, `unRegister number in DB:\n${UnRegist.toString().replace(/,/g, '\n')}`)
+                await client.sendMessage(msg.from, 'Delete unRegister number from DB...')
+                await Promise.all(UnRegist.map(async (number) => {
+                    await deleteDataUsers(DB, number)
+                }))
+            } else {
+                client.sendMessage(msg.from, 'There is no unRegister number in DB')
+            }
+        } else if (text == '!archive') {
+            const chats = await client.getChats()
+            const personal = chats.filter(x => x.isGroup == false)
+            // archieving personal chat
+            msg.reply(`Request diterima bot akan meng-archieve ${personal.length} personal chat.`)
+            chats.map((x) => {
+                if (x.isGroup == false) x.archive()
+            })
+        } else if (text == '!delete') {
+            const chats = await client.getChats()
+            const personal = chats.filter(x => x.isGroup == false)
+            // Delete personal chat
+            msg.reply(`Request diterima bot akan menghapus ${personal.length} personal chat.`)
+            chats.map((x) => {
+                if (x.isGroup == false) x.delete()
+            })
+        } else if (msg.body.startsWith('!leave ')) {
+            const chats = await client.getChats()
+            const search = chats.filter(x => x.isGroup == true)
+            const except = search.filter(x => x.id._serialized !== msg.body.split(' ')[1])
+            // Leave from all group
+            msg.reply(`Request diterima bot akan keluar dari ${except.length} grup.`)
+            for (var i = 0; i < except.length; i++) {
+                console.log(`Keluar dari Grup: ${except[i].name}`)
+                except[i].leave()
+            }
+        } else if (msg.body.startsWith('!join ')) {
+            const inviteCode = msg.body.split(' ')[1]
+            try {
+                await client.acceptInvite(inviteCode)
+                msg.reply('Joined the group!')
+            } catch (e) {
+                msg.reply('That invite code seems to be invalid.')
+            }
+        } else if (msg.body.startsWith('!sendto ')) {
+            let number = msg.body.split(' ')[1]
+            const messageIndex = msg.body.indexOf(number) + number.length
+            const message = msg.body.slice(messageIndex, msg.body.length)
+            if (number.includes('@g.us')) {
+                const group = await client.getChatById(number)
+                group.sendMessage(message)
+            } else if (!number.includes('@c.us') && !number.includes('@g.us')) {
+                number = number.includes('@c.us') ? number : `${number}@c.us`
+                client.sendMessage(number, message)
+            }
         }
-    } else if (msg.body.startsWith('!sendto ' && msg.from == adminNumber)) {
-        let number = msg.body.split(' ')[1]
-        const messageIndex = msg.body.indexOf(number) + number.length
-        const message = msg.body.slice(messageIndex, msg.body.length)
-        if (number.includes('@g.us')) {
-            const group = await client.getChatById(number)
-            group.sendMessage(message)
-        } else if (!number.includes('@c.us') && !number.includes('@g.us')) {
-            number = number.includes('@c.us') ? number : `${number}@c.us`
-            const chat = await msg.getChat()
-            chat.sendSeen()
-            client.sendMessage(number, message)
-        }
-    } else if (msg.body == '!broadcast' && msg.from == adminNumber) {
-        const getListUsers = await getAllDataUsers(DB)
-        getListUsers.map((item, index) => {
-            const number = item.phone_number
-            setTimeout(async function () {
-                console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Send Broadcast to ${number}`)
-                client.sendMessage(number, await resChat.Broadcast())
-            }, index * 2000) // Delay 2 Sec
-        })
+    } else if (!config.online && keyword.includes(text)) {
+        client.sendMessage(msg.from, 'Maaf, Bot sedang Offline.')
+    }
+
+    if (msg.from != config.admin || msg.from != config.bot) {
+        const chat = await msg.getChat()
+        if (!chat.isGroup) chat.archive()
     }
 })
 
@@ -361,7 +384,7 @@ listen.on('message', async (topic, message) => {
             getListUsers.map((item, index) => {
                 const number = item.phone_number
                 setTimeout(function () {
-                    console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Send Corona Update to ${number}`)
+                    console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Send Corona Update to ${number} (${index})`)
                     client.sendMessage(number, `
 *COVID-19 Update!!*
 Negara: ${localData.Country}
@@ -387,10 +410,9 @@ Presentase Meninggal: ${localData.PresentaseDeath}
                     
 Di Perbarui Pada: 
 ${localData.lastUpdate}
-🛈 Sumber: 
+Sumber: 
 _https://www.covid19.go.id_
                     `)
-
                     // Delay 2 Sec
                 }, index * 1100)
             })

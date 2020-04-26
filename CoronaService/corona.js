@@ -1,8 +1,17 @@
 require('dotenv').config()
-const { forever } = require('async')
-const { readFile, writeFile } = require('fs')
-const { endpoints } = require('../util/data')
-const { getProv } = require('../util/fetcher')
+const {
+    forever
+} = require('async')
+const {
+    readFile,
+    writeFile
+} = require('fs')
+const {
+    endpoints
+} = require('../util/data')
+const {
+    getProv
+} = require('../util/fetcher')
 const moment = require('moment-timezone')
 const fetch = require('node-fetch')
 const mqtt = require('mqtt')
@@ -22,7 +31,9 @@ client.on('connect', () => {
 forever(
     async function () {
             const dataProv = await getProv()
-            await fetch(endpoints.statistikHarian, { cache: 'reload' })
+            await fetch(endpoints.statistikHarian, {
+                    cache: 'reload'
+                })
                 .then(response => response.json())
                 .then(json => {
                     let result = json.features
@@ -34,12 +45,15 @@ forever(
                         readFile('./CoronaService/data.json', 'utf-8', function (err, data) {
                             if (err) throw err
                             const localData = JSON.parse(data)
+                            const provinsiTerdampak = dataProv.total.prov > 34 ? localData.ProvinsiTerdampak : dataProv.total.prov
+                            const totalODP = dataProv.total.prov > 34 ? localData.TotalODP : dataProv.total.odp
+                            const totalPDP = dataProv.total.prov > 34 ? localData.TotalPDP : dataProv.total.pdp
                             const OnlineData = {
                                 Country: 'Indonesia',
                                 Day: result.Hari_ke,
-                                ProvinsiTerdampak: dataProv.total.prov,
-                                TotalODP: dataProv.total.odp,
-                                TotalPDP: dataProv.total.pdp,
+                                ProvinsiTerdampak: provinsiTerdampak,
+                                TotalODP: totalODP,
+                                TotalPDP: totalPDP,
                                 TotalCases: result.Jumlah_Kasus_Kumulatif,
                                 NewCases: `+${result.Jumlah_Kasus_Baru_per_Hari}`,
                                 ActiveCases: result.Jumlah_pasien_dalam_perawatan,
@@ -59,6 +73,16 @@ forever(
                                     client.publish(process.env.MQTT_TOPIC, 'New Update!')
                                 })
                             } else {
+                                readFile('./CoronaService/data.json', 'utf-8', function (err, data) {
+                                    if (err) throw err
+                                    const localData = JSON.parse(data)
+                                    localData.ProvinsiTerdampak = dataProv.total.prov
+                                    localData.TotalODP = dataProv.total.odp
+                                    localData.TotalPDP = dataProv.total.pdp
+                                    writeFile('./CoronaService/data.json', JSON.stringify(localData), 'utf-8', function (err) {
+                                        if (err) throw err
+                                    })
+                                })
                                 console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] No Update on Data.json`)
                             }
                         })

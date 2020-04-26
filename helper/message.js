@@ -33,17 +33,18 @@ kenalin aku Honk! 🤖 robot yang akan memberitahumu informasi mengenai COVID-19
 *COVID-19* 
 !covid  =>  Menu COVID-19
 !corona =>  Data COVID-19 Nasional
-!gejala  =>  Gejala COVID-19
-!inkubasi  =>  Masa Inkubasi COVID-19
+!lokasi =>  Cek status lokasimu
 
 *NOTIFIKASI* 
 !aktif  =>  Mengaktifkan notifikasi
 !mati  =>  Mematikan notifikasi
 
 *LAIN-LAIN*
+!gejala  =>  Info Gejala COVID-19
+!inkubasi  =>  Info Masa Inkubasi COVID-19
 !data => Daftar Website COVID-19 Indonesia
 !peta => Daftar Website Sebaran COVID-19
-!sumber => Sumber data Honk
+!sumber => Sumber data Bot Honk
 
 
 Made with ♥️ by Yoga Sakti`
@@ -52,6 +53,31 @@ Made with ♥️ by Yoga Sakti`
             reject(error)
         }
     })
+};
+
+async function chatSubMenu () {
+    const message = `
+*Menu COVID-19*
+
+!nasional  =>  Data Nasional
+!global  =>  Data Global
+
+*Provinsi*
+!jabar   => Data Provinsi Jawa Barat
+!jateng  => Data Provinsi Jawa Tengah
+!jatim   => Data Provinsi Jawa Timur
+!jakarta => Data Provinsi DKI Jakarta
+
+*Kota*
+!bandung  =>  Data Kota Bandung
+!bekasi  =>  Data Kota Bekasi
+
+*Rumah Sakit*
+!wisma-atlit => Data RS Darurat Wisma Atlit
+
+_>seluruh data yang ada adalah data terbaru._
+_>kirim *!menu* untuk melihat menu utama._`
+    return message
 };
 
 async function chatNasional () {
@@ -348,29 +374,10 @@ Data RS Darurat Wisma Atlit
 };
 
 async function chatSumberData () {
-    const message = `
-Sumber: 
+    const message = `Sumber: 
 1. _https://www.covid19.go.id_
 2. _https://indonesia-covid-19.mathdro.id/api_`
 
-    return message
-};
-
-async function chatDonasi () {
-    const message = `
-*SGB X GRAISENA LAWAN COVID-19*
-            
-Sebagai respon terhadap penyebaran COVID-19 di Indonesia,
-SGB Lawan Corona bersama Yayasan Gerakan Indonesia Sadar Bencana (GRAISENA) di lapangan
-telah menggalang pengumpulan dana publik untuk mencegah penyebaran virus dan melindungi masyarakat.
-           
-Semua hasil donasi yang sudah teman-teman berikan akan kita teruskan kepada Yayasan GRAISENA
-sebagai relawan dilapangan, SGB Lawan Corona hanyalah penengah dalam gerakan ini.
-            
-*Ayo teman-teman mari bantu relawan, medis dan pahlawan lainnya yang sedang berjuang untuk berantas Virus Corona ini!*
-Mari keluarkan #CebanPertama mu
-
-_Total donasi dan Tanggal penutupan donasi dapat di periksa pada web https://sgbcovid19.com_`
     return message
 };
 
@@ -431,6 +438,7 @@ Sebagian besar (81%) dari kasus penyakit coronavirus ini adalah kasus ringan. Ka
 
 module.exports = {
     Menu: chatMenu,
+    SubMenu: chatSubMenu,
     Nasional: chatNasional,
     Global: chatGlobal,
     WismaAtlit: chatWismaAtlit,
@@ -443,7 +451,6 @@ module.exports = {
     PetaProv: chatPetaProv,
     DataNasional: chatDataNasional,
     SumberData: chatSumberData,
-    Donasi: chatDonasi,
     Broadcast: chatBroadcast,
     Inkubasi: chatInkubasi,
     Gejala: chatGejala

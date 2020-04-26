@@ -111,10 +111,10 @@ async function getProv () {
         const Cookie = `${resCookie[0]}${resCookie[7].replace(';', '')}`
         const $ = cheerio.load(await response.text())
         const csrfToken = $("meta[name='csrf-token']").attr('content')
-        const getData = await fetch(`${endpoints.dataKemkes}emerging/data_provinces`, {
+        const getData = await fetch(`${endpoints.dataKemkes}/emerging/data_provinces`, {
             method: 'POST',
             headers: {
-                Cookie: Cookie,
+                Cookie,
                 'X-CSRF-TOKEN': csrfToken,
                 'Content-Type': 'application/x-www-form-urlencoded',
                 Accept: 'application/json, text/javascript, */*; q=0.01'
@@ -125,19 +125,41 @@ async function getProv () {
         const arrProv = []
         let odp = 0
         let pdp = 0
-        data.features.map((x) => {
-            arrProv.push(x.properties)
-            parseInt(x.properties.total_odp) ? odp += x.properties.total_odp : ''
-            parseInt(x.properties.total_pdp) ? pdp += x.properties.total_pdp : ''
-        })
+        if (data.features.length > 34) {
+            for (var i = 35; i < data.features.length; i++) {
+                const x = data.features
+                delete x[i].properties.latitude
+                delete x[i].properties.longitude
+                arrProv.push(x[i].properties)
+                parseInt(x[i].properties.total_odp) ? odp += x[i].properties.total_odp : ''
+                parseInt(x[i].properties.total_pdp) ? pdp += x[i].properties.total_pdp : ''
+            }
+        } else {
+            data.features.map((x) => {
+                arrProv.push(x.properties)
+                delete x.properties.latitude
+                delete x.properties.longitude
+                parseInt(x.properties.total_odp) ? odp += x.properties.total_odp : ''
+                parseInt(x.properties.total_pdp) ? pdp += x.properties.total_pdp : ''
+            })
+        }
+        const topCase = [...arrProv.sort((a, b) => b.total_case - a.total_case).slice(0, 5)].map((x) => { return { provinsi: x.provinsi, total_case: x.total_case } })
+        const topRecover = [...arrProv.sort((a, b) => b.total_recover - a.total_recover).slice(0, 5)].map((x) => { return { provinsi: x.provinsi, total_recover: x.total_recover } })
+        const topDied = [...arrProv.sort((a, b) => b.total_died - a.total_died).slice(0, 5)].map((x) => { return { provinsi: x.provinsi, total_died: x.total_died } })
         const result = {
-            result: arrProv,
+            result: arrProv.sort((a, b) => a.id - b.id),
+            top: {
+                topCase,
+                topRecover,
+                topDied
+            },
             total: {
                 prov: arrProv.length,
                 odp: odp,
                 pdp: pdp
             }
         }
+        // console.log(result)
         resolve(result)
     })
 }
@@ -155,7 +177,6 @@ async function getJabar () {
             })
     })
 };
-
 async function getJateng () {
     return new Promise(async (resolve, reject) => {
         await fetchText(endpoints.dataProvJateng)
