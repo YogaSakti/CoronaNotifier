@@ -38,7 +38,8 @@ Edit .env file:
 ```
 MQTT_URL=mqtt://
 MQTT_TOPIC=
-ADMIN_NUMBER= <number>
+ADMIN_NUMBER= 62...
+BOT_NUMBER= 62...
 DB_URL = 'mongodb+srv://'
 DB_NAME = 
 DB_COLLECTION =
