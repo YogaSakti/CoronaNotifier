@@ -122,7 +122,6 @@ async function getProv () {
             body: 'emerging=COVID-19'
         })
         const data = await getData.json()
-
         const arrProv = []
         let odp = 0
         let pdp = 0
@@ -160,12 +159,10 @@ async function getProv () {
                 pdp: pdp
             }
         }
-        console.log(result)
+        // console.log(result)
         resolve(result)
     })
 }
-
-getProv()
 
 async function getJabar () {
     return new Promise(async (resolve, reject) => {
@@ -180,6 +177,7 @@ async function getJabar () {
             })
     })
 };
+
 async function getJateng () {
     return new Promise(async (resolve, reject) => {
         await fetchText(endpoints.dataProvJateng)

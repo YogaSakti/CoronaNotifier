@@ -1,7 +1,4 @@
 const fetch = require('node-fetch')
-const moment = require('moment-timezone')
-const FormData = require('form-data')
-moment.locale('id')
 
 async function getZoneStatus (latitude, longitude, userId = '2d8ecc70-8310-11ea-84f8-13de98afc5a4') {
     return new Promise(async (resolve, reject) => {
