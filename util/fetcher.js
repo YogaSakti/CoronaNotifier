@@ -122,11 +122,12 @@ async function getProv () {
             body: 'emerging=COVID-19'
         })
         const data = await getData.json()
+
         const arrProv = []
         let odp = 0
         let pdp = 0
         if (data.features.length > 34) {
-            for (var i = 35; i < data.features.length; i++) {
+            for (var i = 34; i < data.features.length; i++) {
                 const x = data.features
                 delete x[i].properties.latitude
                 delete x[i].properties.longitude
@@ -159,10 +160,12 @@ async function getProv () {
                 pdp: pdp
             }
         }
-        // console.log(result)
+        console.log(result)
         resolve(result)
     })
 }
+
+getProv()
 
 async function getJabar () {
     return new Promise(async (resolve, reject) => {

@@ -180,7 +180,7 @@ client.on('message', async msg => {
             const contact = await msg.getContact()
             client.sendMessage(msg.from, await resChat.Menu(contact))
         } else if (['!covid', '!covid19', '!covid-19'].includes(text)) {
-            client.sendMessage(msg.from, resChat.SubMenu())
+            client.sendMessage(msg.from, await resChat.SubMenu())
         } else if (text == '!inkubasi') {
             client.sendMessage(msg.from, await resChat.Inkubasi())
         } else if (text == '!gejala') {
@@ -195,25 +195,35 @@ client.on('message', async msg => {
 
         // Command Get Data
         if (text == '!global') {
+            console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Request Data Global).`)
             client.sendMessage(msg.from, await resChat.Global())
         } else if (['!corona', '!nasional'].includes(text)) {
+            console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Request Nasional).`)
             client.sendMessage(msg.from, await resChat.Nasional())
         } else if (text == '!jabar') {
+            console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Request Data Jabar).`)
             client.sendMessage(msg.from, await resChat.Jabar())
         } else if (text == '!jateng') {
+            console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Request Data jateng).`)
             client.sendMessage(msg.from, await resChat.Jateng())
         } else if (text == '!jatim') {
+            console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Request Data Jatim).`)
             client.sendMessage(msg.from, await resChat.Jatim())
         } else if (text == '!jakarta') {
+            console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Request Data Jakarta).`)
             client.sendMessage(msg.from, await resChat.Jakarta())
         } else if (text == '!bandung') {
+            console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Request Data Bandung).`)
             client.sendMessage(msg.from, await resChat.Bandung())
         } else if (text == '!bekasi') {
+            console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Request Data Bekasi).`)
             client.sendMessage(msg.from, await resChat.Bekasi())
         } else if (text == '!wisma-atlit') {
+            console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Request Data Wisma Atlit).`)
             client.sendMessage(msg.from, await resChat.WismaAtlit())
         } else if (text == '!lokasi' && msg.hasQuotedMsg) {
             const quotedMsg = await msg.getQuotedMessage()
+            console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Request Status Zona (${quotedMsg.location.latitude},${quotedMsg.location.longitude}).`)
             const zoneStatus = await getAll(quotedMsg.location.latitude, quotedMsg.location.longitude)
             if (zoneStatus.kode == 200) {
                 let data = ''
@@ -232,9 +242,9 @@ client.on('message', async msg => {
             }
         } else if (text == '!lokasi') {
             const text = '*CEK LOKASI COVID-19*\nBerikut cara untuk cek lokasimu: \n1. Kirimkan lokasimu\n2. Balas dengan kata !lokasi, lokasi yang kamu kirim tadi (klik & tahan chat lokasimu lalu pilih balas)\n3. Kamu akan mendapat informasi mengenai lokasi yang kamu kirim\n\n Jika kurang jelas silahkan lihat gambar dibawah ini.'
-            client.sendMessage(msg.from, text)
+            await client.sendMessage(msg.from, text)
             const tutor = new MessageMedia('image/jpg', readFileSync('./image/lokasi.jpg', 'base64'))
-            client.sendMessage(msg.from, tutor)
+            await client.sendMessage(msg.from, tutor)
         }
 
         // Command Notification
@@ -265,7 +275,7 @@ client.on('message', async msg => {
             if (config.online) {
                 client.sendMessage(msg.from, 'Bot is Online.')
             } else {
-                config.online = online
+                config.online = true
                 client.sendMessage(msg.from, 'Bot is now Online.')
             }
         } else if (text == '!offline') {
@@ -368,7 +378,7 @@ client.on('message', async msg => {
         client.sendMessage(msg.from, 'Maaf, Bot sedang Offline.')
     }
 
-    if (msg.from != config.admin || msg.from != config.bot) {
+    if (!keyword.includes(text) && (msg.from !== config.admin || msg.from !== config.bot)) {
         const chat = await msg.getChat()
         if (!chat.isGroup) chat.archive()
     }
