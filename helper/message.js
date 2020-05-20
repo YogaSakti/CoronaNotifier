@@ -93,6 +93,7 @@ async function chatNasional () {
 Negara: ${localData.Country}
 Hari Ke: ${localData.Day}
 Provinsi Terdampak: ${localData.ProvinsiTerdampak}
+Kabupaten/Kota Terdampak: ${localData.KabKotTerdampak}
 
 Total ODP: ${localData.TotalODP.toLocaleString()}
 Total PDP: ${localData.TotalPDP.toLocaleString()}
@@ -247,9 +248,14 @@ async function chatJateng () {
 Provinsi: Jawa Tengah
 
 *ODP*
+ODP Dipantau: ${parsedData.odp_diPantau}
+ODP Selesai Dipantau: ${parsedData.odp_selesaiPantau}
 Total ODP: ${parsedData.odp}
 
 *PDP*
+PDP Dirawat: ${parsedData.pdp_diRawat}
+PDP Sembuh: ${parsedData.pdp_selesaiRawat}
+PDP Meninggal: ${parsedData.pdp_meninggal}
 Total PDP: ${parsedData.pdp}
 
 *Positif COVID-19*
@@ -260,7 +266,7 @@ Total Positif: ${parsedData.total_positif}
 
 Terakhir Diperbarui Pada: 
 ${parsedData.last_update}
-Sumber: ${parsedData.sumber}`
+Sumber:  Dinas Kesehatan Provinsi Jawa Tengah`
     return message
 };
 

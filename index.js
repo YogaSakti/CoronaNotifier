@@ -28,7 +28,12 @@ const config = {
 
 const client = new Client({
     puppeteer: {
+        headless: true,
+        // userDataDir: './temp',
         args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--ignore-certificate-errors',
             '--log-level=3', // fatal only
             '--no-default-browser-check',
             '--disable-infobars',
@@ -36,14 +41,11 @@ const client = new Client({
             '--disable-site-isolation-trials',
             '--no-experiments',
             '--ignore-gpu-blacklist',
-            '--ignore-certificate-errors',
             '--ignore-certificate-errors-spki-list',
             '--disable-gpu',
             '--disable-extensions',
             '--disable-default-apps',
             '--enable-features=NetworkService',
-            '--disable-setuid-sandbox',
-            '--no-sandbox',
             '--disable-accelerated-2d-canvas',
             '--no-first-run',
             '--no-zygote'
@@ -131,8 +133,11 @@ client.on('message', async msg => {
     if (msg.from.includes('@g.us') && msg.type == 'chat') console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Message:`, msg.from.replace('@g.us', ''), `| ${msg.type} | `, msg.body)
 
     const keyword = ['menu', 'info', 'corona', 'help', 'covid', 'aktif', '!info', 'halo', 'hai', 'hallo', '!ping', 'p', '!honk', 'honk!', 'honk', '!help', '!menu', '!covid', '!covid19', '!covid-19', '!inkubasi', '!gejala', '!peta', '!data', '!sumber', '!global', '!corona', '!nasional', '!jabar', '!jateng', '!jatim', '!jakarta', '!bandung', '!bekasi', '!wisma-atlit', '!aktif', '!mati', '!lokasi']
-
     const text = msg.body.toLowerCase()
+
+    if (config.online == false && keyword.includes(text) && msg.from !== config.admin) {
+        msg.reply(msg.from, 'Maaf, Bot sedang Offline.')
+    }
 
     if (config.online && keyword.includes(text)) {
         // General Chat
@@ -174,25 +179,25 @@ client.on('message', async msg => {
             console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Request Nasional).`)
             client.sendMessage(msg.from, await resChat.Nasional())
         } else if (text == '!jabar') {
-            console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Request Data Jabar).`)
+            console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Request Data Jabar.`)
             client.sendMessage(msg.from, await resChat.Jabar())
         } else if (text == '!jateng') {
-            console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Request Data jateng).`)
+            console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Request Data jateng.`)
             client.sendMessage(msg.from, await resChat.Jateng())
         } else if (text == '!jatim') {
-            console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Request Data Jatim).`)
+            console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Request Data Jatim.`)
             client.sendMessage(msg.from, await resChat.Jatim())
         } else if (text == '!jakarta') {
-            console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Request Data Jakarta).`)
+            console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Request Data Jakarta.`)
             client.sendMessage(msg.from, await resChat.Jakarta())
         } else if (text == '!bandung') {
-            console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Request Data Bandung).`)
+            console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Request Data Bandung.`)
             client.sendMessage(msg.from, await resChat.Bandung())
         } else if (text == '!bekasi') {
-            console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Request Data Bekasi).`)
+            console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Request Data Bekasi.`)
             client.sendMessage(msg.from, await resChat.Bekasi())
         } else if (text == '!wisma-atlit') {
-            console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Request Data Wisma Atlit).`)
+            console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Request Data Wisma Atlit.`)
             client.sendMessage(msg.from, await resChat.WismaAtlit())
         } else if (text == '!lokasi') {
             if (msg.hasQuotedMsg) {
@@ -246,7 +251,9 @@ client.on('message', async msg => {
                 await client.sendMessage(msg.from, 'Nomor anda telah dihapus dari daftar notifikasi')
             }
         }
-    } else if (msg.from == config.admin || config.bot) {
+    }
+
+    if (msg.from == config.admin || config.bot) {
         // Command Admin
         if (msg.body.startsWith('!state-')) {
             const state = msg.body.split('-')[1]
@@ -271,8 +278,9 @@ client.on('message', async msg => {
             const chats = await client.getChats()
             const group = chats.filter(x => x.isGroup == true)
             const personalChat = chats.filter(x => x.isGroup == false)
+            const archivedChat = chats.filter(x => x.archived == true)
             const getListUsers = await db.getAllDataUsers(DB)
-            client.sendMessage(msg.from, `The bot has...\nChats open: ${chats.length}\nGroups chats: ${group.length}\nPersonal chats: ${personalChat.length}\nNotification User: ${getListUsers.length}`)
+            client.sendMessage(msg.from, `The bot has...\nChats Open: ${chats.length}\nGroups Chats: ${group.length}\nPersonal Chats: ${personalChat.length}\nArchived Chats: ${archivedChat.length}\nUnArchived Chats: ${personalChat.length - archivedChat.length}\nNotification User: ${getListUsers.length}`)
         } else if (text == '!broadcast') {
             const getListUsers = await db.getAllDataUsers(DB)
             getListUsers.map((item, index) => {
@@ -308,9 +316,10 @@ client.on('message', async msg => {
             await client.getChats()
                 .then(x => {
                     const personal = x.filter(y => y.isGroup == false)
-                    msg.reply(`Request diterima bot akan meng-archieve ${personal.length} personal chat.`)
+                    const archivedChat = personal.filter(y => y.archived == false)
+                    msg.reply(`Request diterima bot akan meng-archieve ${archivedChat.length} personal chat.`)
                     x.map((z) => {
-                        if (z.isGroup == false) z.archive()
+                        if (z.isGroup == false && z.archived == false) z.archive()
                     })
                 })
         } else if (text == '!delete') {
@@ -351,13 +360,13 @@ client.on('message', async msg => {
                 client.sendMessage(number, message)
             }
         }
-    } else if (!config.online && keyword.includes(text)) {
-        client.sendMessage(msg.from, 'Maaf, Bot sedang Offline.')
     }
 
-    if (!keyword.includes(text) && (msg.from !== config.admin || config.bot)) {
-        const chat = await msg.getChat()
-        if (!chat.isGroup) chat.archive()
+    if (keyword.includes(text) && (msg.from !== config.admin || config.bot)) {
+        setTimeout(async function () {
+            const chat = await msg.getChat()
+            if (!chat.isGroup) chat.archive()
+            }, 500)
     }
 })
 
@@ -368,18 +377,15 @@ listen.on('message', async (topic, message) => {
         fs.readFile('./CoronaService/data.json', 'utf-8', function (err, data) {
             if (err) throw err
             const localData = JSON.parse(data)
-            getListUsers.map((item, index) => {
-                const number = item.phone_number
-                setTimeout(function () {
-                    console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Send Corona Update to ${number} (${index})`)
-                    client.sendMessage(number, `
+            const textUpdate = `
 *COVID-19 Update!!*
 Negara: ${localData.Country}
 Hari Ke: ${localData.Day}
 Provinsi Terdampak: ${localData.ProvinsiTerdampak}
+Kabupaten/Kota Terdampak: ${localData.KabKotTerdampak}
 
-Total ODP: ${localData.TotalODP.toLocaleString()}
-Total PDP: ${localData.TotalPDP.toLocaleString()}
+Total ODP: ${localData.TotalODP}
+Total PDP: ${localData.TotalPDP}
 
 Total Kasus: ${localData.TotalCases}
 *Kasus Baru: ${localData.NewCases}*
@@ -399,9 +405,17 @@ Di Perbarui Pada:
 ${localData.lastUpdate}
 Sumber: 
 _https://www.covid19.go.id_
-                    `)
-                    // Delay 2 Sec
-                }, index * 1100)
+                    `
+            getListUsers.map((item, index) => {
+                const number = item.phone_number
+                setTimeout(async function () {
+                    console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Send Corona Update to ${number} (${index})`)
+                    try {
+                        await client.sendMessage(number, textUpdate)
+                    } catch (error) {
+                        console.log(error.message)
+                    }
+                }, index * 1100) // Delay 1,1 Sec
             })
         })
     }

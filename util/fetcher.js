@@ -143,9 +143,24 @@ async function getProv () {
                 parseInt(x.properties.total_pdp) ? pdp += x.properties.total_pdp : ''
             })
         }
-        const topCase = [...arrProv.sort((a, b) => b.total_case - a.total_case).slice(0, 5)].map((x) => { return { provinsi: x.provinsi, total_case: x.total_case } })
-        const topRecover = [...arrProv.sort((a, b) => b.total_recover - a.total_recover).slice(0, 5)].map((x) => { return { provinsi: x.provinsi, total_recover: x.total_recover } })
-        const topDied = [...arrProv.sort((a, b) => b.total_died - a.total_died).slice(0, 5)].map((x) => { return { provinsi: x.provinsi, total_died: x.total_died } })
+        const topCase = [...arrProv.sort((a, b) => b.total_case - a.total_case).slice(0, 5)].map((x) => {
+            return {
+                provinsi: x.provinsi,
+                total_case: x.total_case
+            }
+        })
+        const topRecover = [...arrProv.sort((a, b) => b.total_recover - a.total_recover).slice(0, 5)].map((x) => {
+            return {
+                provinsi: x.provinsi,
+                total_recover: x.total_recover
+            }
+        })
+        const topDied = [...arrProv.sort((a, b) => b.total_died - a.total_died).slice(0, 5)].map((x) => {
+            return {
+                provinsi: x.provinsi,
+                total_died: x.total_died
+            }
+        })
         const result = {
             result: arrProv.sort((a, b) => a.id - b.id),
             top: {
@@ -184,19 +199,21 @@ async function getJateng () {
             .then(text => {
                 const $ = cheerio.load(text)
                 const dataInfo = $('p.text-detail')
-                const dataPositifRed = $('div.font-counter.fc-red')
-                const dataPositifGreen = $('div.font-counter.fc-green')
-                const dataOdp = $('h3.font-counter.fc-ungu')
-                const dataPdp = $('h3.font-counter.fc-orange')
+                const dataODP = $('div.font-counter-2.fc-ungu')
+                const dataPDP = $('div.font-counter-2.fc-orange')
                 const result = {
-                    sumber: dataInfo[0].children[1].data.trim(),
-                    odp: parseFloat(dataOdp[0].children[0].data),
-                    pdp: parseFloat(dataPdp[0].children[0].data),
-                    positif_dirawat: parseInt(dataPositifRed[1].children[0].data),
-                    positif_sembuh: parseInt(dataPositifGreen[0].children[0].data),
-                    positif_meninggal: parseInt(dataPositifRed[2].children[0].data),
-                    total_positif: parseInt(dataPositifRed[0].children[0].data),
-                    last_update: dataInfo[1].children[1].data.split('|')[0].trim() + '| Pukul: ' + dataInfo[1].children[1].data.split('|')[1].split('*')[0].trim()
+                    odp: $('h3.font-counter.fc-ungu').text().trim(),
+                    odp_diPantau: dataODP[0].children[0].data.trim(),
+                    odp_selesaiPantau: dataODP[1].children[0].data.trim(),
+                    pdp: $('h3.font-counter.fc-orange').text().trim(),
+                    pdp_diRawat: dataPDP[0].children[0].data.trim(),
+                    pdp_selesaiRawat: dataPDP[1].children[0].data.trim(),
+                    pdp_meninggal: dataPDP[2].children[0].data.trim(),
+                    total_positif: $('h3.font-counter.fc-red').text().trim(),
+                    positif_dirawat: $('div.font-counter-2.fc-red').text().trim().split(' ')[0],
+                    positif_sembuh: $('div.font-counter-2.fc-green').text().trim().split(' ')[0],
+                    positif_meninggal: $('div.font-counter-2.text-black').text().trim().split(' ')[0],
+                    last_update: dataInfo[1].children[1].data.split('|')[0].trim() + ' | Pukul: ' + dataInfo[1].children[1].data.split('|')[1].split('*')[0].trim()
                 }
                 // console.log(result)
                 resolve(result)
@@ -212,7 +229,7 @@ async function getJatim () {
         await fetchText(endpoints.dataProvJatim)
             .then(text => {
                 const $ = cheerio.load(text)
-                const getScript = $('script')[9].children[0].data
+                const getScript = $('script')[10].children[0].data
                 const DataKabupaten = JSON.parse(getScript.match(/\[(.{100,}?)\]/)[0])
                 const daftarKab = []
                 const data = {
