@@ -92,8 +92,7 @@ async function chatNasional () {
 *DATA COVID-19*
 Negara: ${localData.Country}
 Hari Ke: ${localData.Day}
-Provinsi Terdampak: ${localData.ProvinsiTerdampak}
-Kabupaten/Kota Terdampak: ${localData.KabKotTerdampak}
+Provinsi Terdampak: 34
 
 Total ODP: ${localData.TotalODP.toLocaleString()}
 Total PDP: ${localData.TotalPDP.toLocaleString()}

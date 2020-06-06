@@ -261,37 +261,30 @@ client.on('message', async msg => {
                 }, index * 500)
             })
         } else if (text == '!dbcheck') {
-            const getListUsers = await db.getAllDataUsers(DB)
             const UnRegist = []
-            const getUnRegist = await Promise.all(getListUsers.map(async (item, index) => {
-                const cekUser = await client.isRegisteredUser(item.phone_number)
-                return {
-                    number: item.phone_number,
-                    status: cekUser
-                }
-            }))
-            getUnRegist.map(x => {
-                if (x.status == false) UnRegist.push(x.number)
+            const getListUsers = await db.getAllDataUsers(DB)
+            getListUsers.map((item, index) => {
+                const number = item.phone_number
+                const status = client.isRegisteredUser(item.phone_number)
+                if (status == false) UnRegist.push(number)
             })
             if (UnRegist.length !== 0) {
-                await client.sendMessage(from, `unRegister number in DB:\n${UnRegist.toString().replace(/,/g, '\n')}`)
-                await client.sendMessage(from, 'Delete unRegister number from DB...')
-                await Promise.all(UnRegist.map(async (number) => {
+                client.sendMessage(from, `unRegister number in DB:\n${UnRegist.toString().replace(/,/g, '\n')}`)
+                client.sendMessage(from, 'Delete unRegister number from DB...')
+                UnRegist.map(async (number) => {
                     await db.deleteDataUsers(DB, number)
-                }))
+                })
             } else {
                 client.sendMessage(from, 'There is no unRegister number in DB')
             }
         } else if (text == '!archive') {
-            await client.getChats()
-                .then(x => {
-                    const personal = x.filter(y => y.isGroup == false)
-                    const archivedChat = personal.filter(y => y.archived == false)
-                    msg.reply(`Request diterima bot akan meng-archieve ${archivedChat.length} personal chat.`)
-                    x.map((z) => {
-                        if (z.isGroup == false && z.archived == false) z.archive()
-                    })
-                })
+            const chats = await client.getChats()
+            const personal = chats.filter(x => x.isGroup == false)
+            const unArchivedChat = personal.filter(y => y.archived == false)
+            msg.reply(`Request diterima bot akan meng-archieve ${unArchivedChat.length} personal chat.`)
+            unArchivedChat.map((z,c) => {
+                setTimeout(() => { z.archive() }, c * 100)
+            })
         } else if (text == '!delete') {
             const chats = await client.getChats()
             const personal = chats.filter(x => x.isGroup == false)
@@ -359,8 +352,7 @@ listen.on('message', async (topic, message) => {
 *COVID-19 Update!!*
 Negara: ${localData.Country}
 Hari Ke: ${localData.Day}
-Provinsi Terdampak: ${localData.ProvinsiTerdampak}
-Kabupaten/Kota Terdampak: ${localData.KabKotTerdampak}
+Provinsi Terdampak: 34
 
 Total ODP: ${localData.TotalODP}
 Total PDP: ${localData.TotalPDP}

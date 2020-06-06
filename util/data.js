@@ -4,6 +4,7 @@ module.exports.endpoints = {
     indoHarian: 'https://indonesia-covid-19.mathdro.id/api/harian',
     statistikHarian: 'https://services5.arcgis.com/VS6HdKS0VfIhv8Ct/ArcGIS/rest/services/Statistik_Perkembangan_COVID19_Indonesia/FeatureServer/0/query?where=Jumlah_Kasus_Kumulatif+IS+NOT+NULL+AND+Jumlah_Pasien_Sembuh+IS+NOT+NULL+AND+Jumlah_Pasien_Meninggal+IS+NOT+NULL&outFields=*&orderByFields=Tanggal+asc&f=json',
     statistikHarianAll: 'https://services5.arcgis.com/VS6HdKS0VfIhv8Ct/ArcGIS/rest/services/Statistik_Perkembangan_COVID19_Indonesia/FeatureServer/0/query?where=Jumlah_Kasus_Kumulatif+IS+NOT+NULL+AND+Jumlah_Pasien_Sembuh+IS+NOT+NULL+AND+Jumlah_Pasien_Meninggal+IS+NOT+NULL&outFields=*&orderByFields=Tanggal+asc&resultRecordCount=100&f=json',
+    dataUpdate: 'https://data.covid19.go.id/public/api/update.json',
     dataKemkes: 'https://covid19.disiplin.id',
     dataProvJabar: 'https://coredata.jabarprov.go.id/analytics/covid19/aggregation.json',
     dataProvjabarV2: 'https://covid19-public.digitalservice.id/api/v1/rekapitulasi/jabar', // /harian?level=kab /kumulatif?level=prov
