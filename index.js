@@ -206,7 +206,7 @@ client.on('message', async msg => {
             if (body && dbDataUsers.length < 1) {
                 dbDataUsers.push(sender)
                 await db.insertDataUsers(DB, sender)
-                await client.sendMessage(sender, `Selamat, nomor hp anda "${author.split('@c.us')[0]}" berhasil diregistrasi kedalam daftar notifikasi, anda akan mendapat notifikasi ketika ada pembaruan data.`)
+                await client.sendMessage(sender, `Selamat, nomor hp anda "${sender.split('@c.us')[0]}" berhasil diregistrasi kedalam daftar notifikasi, anda akan mendapat notifikasi ketika ada pembaruan data.`)
             } else {
                 await client.sendMessage(sender, 'Maaf, nomor hp anda telah diregistrasi. Untuk membatalkan kirim *!mati*')
             }
@@ -282,7 +282,7 @@ client.on('message', async msg => {
             const personal = chats.filter(x => x.isGroup == false)
             const unArchivedChat = personal.filter(y => y.archived == false)
             msg.reply(`Request diterima bot akan meng-archieve ${unArchivedChat.length} personal chat.`)
-            unArchivedChat.map((z,c) => {
+            unArchivedChat.map((z, c) => {
                 setTimeout(() => { z.archive() }, c * 100)
             })
         } else if (text == '!delete') {
