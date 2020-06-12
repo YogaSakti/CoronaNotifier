@@ -7,7 +7,7 @@ Corona Notifier is a Whatsapp automatic notification robot using MQTT, nodeJS & 
 
 ## Getting Started
 
-This project require MQTT broker, nodeJS & lowDB.
+This project require MQTT broker, nodeJS.
 
 ### Install
 Clone this project
