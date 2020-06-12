@@ -1,4 +1,4 @@
-# Corona Notifier
+# Whatsapp Bot Corona Notifier
 ![GitHub last commit](https://img.shields.io/github/last-commit/YogaSakti/CoronaNotifier)
 [![whatsapp-web.js version](https://img.shields.io/github/package-json/dependency-version/YogaSakti/CoronaNotifier/whatsapp-web.js)](https://www.npmjs.com/package/whatsapp-web.js)
 ![Twitter](https://img.shields.io/twitter/follow/teman_bahagia?style=social)
