@@ -2,7 +2,7 @@
 const fs = require('fs')
 const path = require('path')
 
-const { getGlobal, getBandung, getJatim, getJabar, getJateng, getWismaAtlit} = require('../util/fetcher')
+const { getGlobal, getBandung, getJatim, getJabar, getJateng, getWismaAtlit } = require('../util/fetcher')
 const moment = require('moment-timezone')
 moment.locale('id')
 
