@@ -1,21 +1,8 @@
 /* eslint-disable no-async-promise-executor */
-const {
-    readFile
-} = require('fs')
-
+const fs = require('fs')
 const path = require('path')
 
-const {
-    getGlobal,
-    getBandung,
-    getBekasi,
-    getJatim,
-    getJabar,
-    getJateng,
-    getjakarta,
-    getWismaAtlit,
-    getProv
-} = require('../util/fetcher')
+const { getGlobal, getBandung, getJatim, getJabar, getJateng, getWismaAtlit} = require('../util/fetcher')
 const moment = require('moment-timezone')
 moment.locale('id')
 
@@ -24,11 +11,11 @@ async function chatMenu (contact) {
         try {
             const nama = contact.pushname !== undefined ? `Hai, ${contact.pushname} 😃` : 'Hai 😃'
             const message = `${nama}
-kenalin aku Honk! 🤖 robot yang akan memberitahumu informasi mengenai COVID-19 di Indonesia. 
+kenalin aku 🤖 robot yang akan memberitahumu informasi mengenai COVID-19 di Indonesia. 
 
 *DAFTAR PERINTAH*
-!menu / !help  =>  Menampilkan menu
-!ping  =>  pong
+!help  =>  Menampilkan menu
+!ping  => pong
 
 *COVID-19* 
 !covid  =>  Menu COVID-19
@@ -37,17 +24,11 @@ kenalin aku Honk! 🤖 robot yang akan memberitahumu informasi mengenai COVID-19
 
 *NOTIFIKASI* 
 !aktif  =>  Mengaktifkan notifikasi
-!mati  =>  Mematikan notifikasi
+!mati   =>  Mematikan notifikasi
 
 *LAIN-LAIN*
-!gejala  =>  Info Gejala COVID-19
-!inkubasi  =>  Info Masa Inkubasi COVID-19
-!data => Daftar Website COVID-19 Indonesia
-!peta => Daftar Website Sebaran COVID-19
-!sumber => Sumber data Bot Honk
 
-
-Made with ♥️ by Yoga Sakti`
+Made with ♥️ in Bandung`
             resolve(message)
         } catch (error) {
             reject(error)
@@ -66,7 +47,6 @@ async function chatSubMenu () {
 !jabar   => Data Provinsi Jawa Barat
 !jateng  => Data Provinsi Jawa Tengah
 !jatim   => Data Provinsi Jawa Timur
-!jakarta => Data Provinsi DKI Jakarta
 
 *Kota*
 !bandung  =>  Data Kota Bandung
@@ -83,9 +63,8 @@ _>kirim *!menu* untuk melihat menu utama._`
 async function chatNasional () {
     return new Promise(async (resolve, reject) => {
         try {
-            const dataProv = await getProv()
             const filePath = path.join(__dirname, '../CoronaService/data.json')
-            readFile(filePath, 'utf-8', function (err, data) {
+            fs.readFile(filePath, 'utf-8', function (err, data) {
                 if (err) return console.log(err)
                 const localData = JSON.parse(data)
                 const message = `
@@ -149,31 +128,6 @@ Total Positif:${parsedData.positif + parsedData.sembuh + parsedData.meninggal}
 Dicek Pada: 
 ${moment().tz('Asia/Jakarta').format('LLLL').replace('pukul', '|')} WIB
 `
-    return message
-};
-
-async function chatBekasi () {
-    const parsedData = await getBekasi()
-    const message = `
-*DATA COVID-19*
-Kota: Bekasi
-
-*ODP*
-Proses Pemantauan: ${parsedData.odp_dirawat}
-Selesai Pemantauan: ${parsedData.odp_selesai}
-Total ODP: ${parsedData.odp}
-
-*PDP*
-Masih Dirawat: ${parsedData.pdp_dirawat}
-Pulang dan Sehat: ${parsedData.pdp_sembuh}
-Total PDP: ${parsedData.pdp}
-
-*Positif COVID-19*
-Total Positif: ${parsedData.total_positif}
-Sembuh: ${parsedData.positif_sembuh}
-
-Terakhir Diperbarui Pada: 
-${parsedData.last_update}`
     return message
 };
 
@@ -269,35 +223,6 @@ Sumber:  Dinas Kesehatan Provinsi Jawa Tengah`
     return message
 };
 
-async function chatJakarta () {
-    const parsedData = await getjakarta()
-    const message = `
-*DATA COVID-19*
-Provinsi: DKI Jakarta
-
-*ODP*
-Proses Pemantauan: ${parsedData.Proses_Pemantauan}
-Selesai Pemantauan: ${parsedData.Selesai_Pemantauan}
-Total ODP: ${parsedData.Total_ODP}
-
-*PDP*
-Masih Dirawat: ${parsedData.Masih_Dirawat}
-Pulang dan Sehat: ${parsedData.Pulang_dan_Sehat}
-Total PDP: ${parsedData.Total_PDP}
-
-*Positif COVID-19*
-Dirawat: ${parsedData.Dirawat}
-Sembuh: ${parsedData.Sembuh}
-Meninggal: ${parsedData.Total_Meninggal}
-Isolasi Mandiri: ${parsedData.Self_Isolation}
-Total Positif: ${parsedData.Total_Positif}
-
-Terakhir Diperbarui Pada: 
-${moment(parsedData.Date_update).format('dddd, D MMMM YYYY').toString()}
-Sumber: Jakarta Tanggap COVID19`
-    return message
-};
-
 async function chatGlobal () {
     const globalData = await getGlobal()
     const message = `
@@ -339,107 +264,7 @@ _covid-monitoring.kemkes.go.id_
 Dicek pada: 
 ${moment().tz('Asia/Jakarta').format('LLLL').replace('pukul', '|')} WIB`
     return message
-};
-
-async function chatPetaProv () {
-    const message = `
-*Daftar Website Sebaran COVID-19*
-
-Maaf dikarenakan daftar website sebaran terlalu banyak 🤖 honk tidak dapat menampilkannya dichat ini, untuk itu kamu bisa melihat daftarnya melalui link di bawah ini 🙂.
-
-_https://kawalcovid19.id/pemerintah-daerah_
-`
-    return message
-};
-
-async function chatDataNasional () {
-    const message = `
-Daftar Website Penting Perihal COVID-19 
-
-Situs Resmi Pemerintah untuk COVID-19
-- _https://www.covid19.go.id_
-
-Peta Kasus COVID-19 di Indonesia
-- _https://kcov.id/petapositif_
-
-Peta Rumah Sakit Rujukan di Indonesia
-- _https://kawalcovid19.maps.arcgis.com/apps/opsdashboard/index.html#/8caa437261f2440093ce28e33e3ba6dd_
-
-WHO Covid-19
-- _https://www.who.int/emergencies/diseases/novel-coronavirus-2019_
-
-UNICEF Indonesia
-- _https://www.unicef.org/indonesia/id/coronavirus_
-
-Data RS Darurat Wisma Atlit
-- _https://u071.zicare.id/house/status_
-
-`
-    return message
-};
-
-async function chatSumberData () {
-    const message = `Sumber: 
-1. _https://www.covid19.go.id_
-2. _https://indonesia-covid-19.mathdro.id/api_`
-
-    return message
-};
-
-async function chatBroadcast () {
-    const message = 'some text'
-    return message
-};
-
-async function chatInkubasi () {
-    const message = `
-*Masa periode inkubasi untuk COVID-19?*
-- Periode inkubasi dari COVID-19 diperkirakan sepanjang 14 hari setelah paparan pertama
-- Pada beberapa kasus dipastikan hanya 5 hari setelah paparan pertama                                                                               
-- Pada infeksi dengan kluster sebuah keluarga, timbulnya demam dan sindrom pernapasan terjadi sekitar 3-6 hari setelah paparan pertama
-    
-*Berapa lama waktu untuk test COVID-19?*
-- 1-5 Hari (Tergantung kondisi Lab)`
-    return message
-};
-
-async function chatGejala () {
-    const message = `
-Virus *COVID-19* mempengaruhi orang yang berbeda dengan cara yang berbeda. 
-*COVID-19* adalah penyakit pernapasan dan sebagian besar orang yang terinfeksi akan mengalami gejala ringan hingga sedang dan sembuh tanpa memerlukan perawatan khusus. 
-Orang yang memiliki kondisi medis yang mendasarinya dan mereka yang _berusia di atas 60 tahun memiliki risiko lebih tinggi_ terkena penyakit parah dan kematian.
-
-Gejala umum meliputi:
-- demam
-- batuk kering
-- letih lesu
-    
-Gejala lain termasuk:
-- sesak napas
-- sakit dan nyeri
-- sakit tenggorokan
-- dan sangat sedikit orang akan melaporkan diare, mual atau pilek.
-    
-Orang dengan *gejala ringan* yang dinyatakan sehat harus mengisolasi diri dan menghubungi penyedia medis mereka atau saluran informasi COVID-19 untuk nasihat tentang pengujian dan rujukan.
-Orang dengan *demam, batuk atau kesulitan bernapas* harus menghubungi dokter mereka dan mencari perhatian medis.
-
-Gejala dikategorikan sebagai ringan, parah, atau kritis dan artikel penelitian menggambarkan ini sebagai berikut:
-- Kasus kritis: 
-Kasus kritis termasuk pasien yang menderita gagal pernapasan, syok septik, dan / atau disfungsi atau kegagalan banyak organ.
-
-- Kasus parah: 
-Ini termasuk pasien yang menderita sesak napas, frekuensi pernapasan ≥ 30 / menit, saturasi oksigen darah ≤93%, rasio PaO2 / FiO2 <300,37 dan / atau infiltrat paru> 50% dalam 24-48 jam.
-
-- Kasus ringan: 
-Sebagian besar (81%) dari kasus penyakit coronavirus ini adalah kasus ringan. Kasus ringan mencakup semua pasien tanpa pneumonia atau kasus pneumonia ringan.
-`
-    return message
-};
-
-// async function chat() {
-//
-//     })
-// };
+}
 
 module.exports = {
     Menu: chatMenu,
@@ -448,15 +273,7 @@ module.exports = {
     Global: chatGlobal,
     WismaAtlit: chatWismaAtlit,
     Bandung: chatBandung,
-    Bekasi: chatBekasi,
     Jatim: chatJatim,
     Jabar: chatJabar,
-    Jateng: chatJateng,
-    Jakarta: chatJakarta,
-    PetaProv: chatPetaProv,
-    DataNasional: chatDataNasional,
-    SumberData: chatSumberData,
-    Broadcast: chatBroadcast,
-    Inkubasi: chatInkubasi,
-    Gejala: chatGejala
+    Jateng: chatJateng
 }

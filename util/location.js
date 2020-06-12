@@ -70,26 +70,19 @@ async function getArea (latitude, longitude, size = 10) {
     })
 };
 
-async function getAll (latitude, longitude) {
-    return Promise.all(
-        [getZoneStatus(latitude, longitude), getArea(latitude, longitude)]
-    ).then(responses => {
-                const result = {
-                    kode: 200,
-                    status: responses[0].status,
-                    optional: responses[0].optional,
-                    data: []
-                }
-                responses[1].data.map((x) => result.data.push(x))
-                return result
-            }
-    )
-    .catch((err) => {
+module.exports = getAll = async (latitude, longitude) => {
+    try {
+        const responses = await Promise.all([getZoneStatus(latitude, longitude), getArea(latitude, longitude)])
+        const result = {
+            kode: 200,
+            status: responses[0].status,
+            optional: responses[0].optional,
+            data: []
+        }
+        responses[1].data.map((x) => result.data.push(x))
+        return result
+    } catch (err) {
         console.log(err)
         return { kode: 0 }
-    })
-};
-
-module.exports = {
-    getAll
+    }
 }

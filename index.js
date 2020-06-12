@@ -1,48 +1,33 @@
-const { Client, MessageMedia } = require('whatsapp-web.js')
-const { getAll } = require('./util/location')
 require('dotenv').config()
+const { Client, MessageMedia } = require('whatsapp-web.js')
 const fs = require('fs')
-const moment = require('moment-timezone')
 const qrcode = require('qrcode-terminal')
 const mqtt = require('mqtt')
 const db = require('./helper/db')
 const resChat = require('./helper/message')
+const getAll = require('./util/location')
+const { c, color } = require('./util/log')
 const listen = mqtt.connect(process.env.MQTT_URL)
 
-let DB
 let sessionCfg
-
 const SESSION_FILE_PATH = './session.json'
 if (fs.existsSync(SESSION_FILE_PATH)) sessionCfg = require(SESSION_FILE_PATH)
-
-const config = {
-    online: true,
-    admin: `${process.env.ADMIN_NUMBER}@c.us`,
-    bot: `${process.envBOT_NUMBER}@c.us`
-}
 
 const client = new Client({
     qrTimeoutMs: 0,
     authTimeoutMs: 0,
     restartOnAuthFail: true,
     takeoverOnConflict: true,
-    takeoverTimeoutMs: 0,
     puppeteer: {
         headless: true,
-        // userDataDir: './temp',
         args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
             '--ignore-certificate-errors',
-            '--log-level=3', // fatal only
-            '--no-default-browser-check',
-            '--disable-infobars',
             '--disable-web-security',
             '--disable-site-isolation-trials',
-            '--no-experiments',
-            '--ignore-gpu-blacklist',
+            '--log-level=3',
             '--ignore-certificate-errors-spki-list',
-            '--disable-gpu',
             '--disable-extensions',
             '--disable-default-apps',
             '--enable-features=NetworkService',
@@ -53,125 +38,112 @@ const client = new Client({
     },
     session: sessionCfg
 })
-// You can use an existing session and avoid scanning a QR code by adding a "session" object to the client options.
 
+// ==========#yogs#========= Begin initialize client
 client.initialize()
 
-// ======================= Begin initialize WAbot
-
+// ==========#yogs#========= Event handler
 client.on('qr', (qr) => {
     qrcode.generate(qr, { small: true })
-    console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Please Scan QR with app!`)
+    c.log('Please Scan QR with app!')
 })
 
 client.on('authenticated', (session) => {
-    console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Authenticated Success.`)
+    c.log('Authenticated Success.')
     sessionCfg = session
-    fs.writeFile(SESSION_FILE_PATH, JSON.stringify(session), function (err) {
-        if (err) console.error(err)
-    })
+    fs.writeFile(SESSION_FILE_PATH, JSON.stringify(session), function (err) { if (err) console.error(err) })
 })
 
-client.on('auth_failure', msg => console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] AUTHENTICATION FAILURE \n ${msg}`))
+client.on('auth_failure', (msg) => c.log(`AUTHENTICATION FAILURE \n ${msg}`))
+client.on('disconnected', (reason) => c.log('Client was logged out', reason))
+client.on('ready', () => c.log('Whatsapp bot ready.'))
+client.on('message_revoke_everyone', (after, before) => { if (before) c.log(`Revoked: ${before.body}`) })
+client.on('change_battery', (status) => { if (status.battery <= 25 && !status.plugged) c.log('Please charge your phone!') })
 
-client.on('ready', async () => {
-    DB = await db.connect()
-    console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Whatsapp bot ready.`)
-})
+// ==========#yogs#========= Event handler: message
 
-// ======================= WaBot Listen on Event
+// [Sample] Avoid Spam Message
+const usedCommandRecently = new Set()
+const usedCommand = (from) => {
+    usedCommandRecently.add(from)
+    setTimeout(() => {
+        usedCommandRecently.delete(from)
+    }, 5000) // 5 sec delay
+}
 
-client.on('message_revoke_everyone', async (after, before) => {
-    if (before) console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Revoked: ${before.body}`)
-})
-
-client.on('change_battery', (status) => {
-    if (status.battery <= 25 && !status.plugged) client.sendMessage(config.admin, 'Please charge your phone!')
-})
-
-client.on('disconnected', (reason) => console.log('Client was logged out', reason))
-
-// ======================= WaBot Listen on message
+const config = {
+    online: true,
+    archive: false
+}
 
 client.on('message', async msg => {
-    const { from, body, type, hasQuotedMsg, author } = msg
-    if (from.includes('@c.us') && type == 'chat') console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Message:`, from.replace('@c.us', ''), `| ${type} | `, body.substr(0, 50))
-    if (from.includes('@g.us') && type == 'chat') console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Message:`, from.replace('@g.us', ''), `| ${type} | `, body.substr(0, 50))
+    const { hasMedia, hasQuotedMsg, isForwarded, body, type, from, author, mentionedIds, location } = msg
+    const caption = type == 'image' ? body : undefined
+    const isChat = type == 'chat'
+    const isGroupMsg = from.includes('@g.us')
+    const admin = isGroupMsg ? `${from.split('-')[0]}@c.us` : from
+    const isAdmin = await db.findAdmin(admin)
+    const getAdmin = await db.getAllAdmin()
+    const keyword = ['halo', 'hai', 'hi', 'hallo', '!ping', '!honk', 'honk', '!help', '!covid', '!covid19', '!global', '!corona', '!nasional', '!jabar', '!jateng', '!jatim', '!jakarta', '!bandung', '!bekasi', '!wisma-atlit', '!aktif', '!mati', '!lokasi']
+    const keys = keyword.map(x => x + '\\b').join('|')
+    let cmd = isChat ? body.toLowerCase().match(new RegExp(keys, 'gi')) : type === 'image' && caption ? caption.toLowerCase().match(new RegExp(keys, 'gi')) : ''
 
-    const keywords = ['menu', 'info', 'corona', 'help', 'covid', 'aktif', '!info', 'halo', 'hai', 'hallo', '!ping', 'p', '!honk', 'honk!', 'honk', '!help', '!menu', '!covid', '!covid19', '!covid-19', '!inkubasi', '!gejala', '!peta', '!data', '!sumber', '!global', '!corona', '!nasional', '!jabar', '!jateng', '!jatim', '!jakarta', '!bandung', '!bekasi', '!wisma-atlit', '!aktif', '!mati', '!lokasi']
-    const keys = keywords.map(x => x + '\\b').join('|')
-    const cmd = type === 'chat' ? body.match(new RegExp(keys, 'gi')) : type === 'image' && caption ? caption.match(new RegExp(keys, 'gi')) : ''
-    const text = body.toLowerCase()
+    // [Sample] Avoid Spam Message
+    const useCommandRecently = usedCommandRecently.has(from)
 
-    if (config.online == false && keyword.includes(text) && from !== config.admin) {
-        msg.reply(from, 'Maaf, Bot sedang Offline.')
-    }
+    // [Sample] Avoid Spam Message
+    if ((cmd && !useCommandRecently && config.online) || (cmd && isAdmin)) {
+        // [Sample] Avoid Spam Message
+        usedCommand(from)
 
-    if (config.online && keyword.includes(text)) {
+        cmd = cmd[0]
+        if (!isGroupMsg && isChat) c.logx(color(cmd, 'yellow'), 'from', color(from.replace('@c.us', ''), 'yellow'))
+        if (isGroupMsg && isChat) c.logx(color(cmd, 'yellow'), 'from', color(from.replace('@g.us', ''), 'yellow'))
+
         // General Chat
-        if (['menu', 'info', 'corona', 'help', 'covid', 'aktif', '!info'].includes(text)) {
-            const chat = await msg.getChat()
-            if (!chat.isGroup) client.sendMessage(from, 'kirim !menu atau !help untuk melihat menu honk!.')
-        } else if (['halo', 'hai', 'hallo'].includes(text)) {
-            const chat = await msg.getChat()
-            if (!chat.isGroup) client.sendMessage(from, 'hi 😃')
-        } else if (['!ping', 'p'].includes(text)) {
+        if (['halo', 'hai', 'hi', 'hallo'].includes(cmd)) {
+            if (!isGroupMsg) msg.reply('hi 😃')
+        } else if (cmd == '!ping') {
             client.sendMessage(from, 'pong')
-        } else if (['!honk', 'honk!', 'honk'].includes(text)) {
+        } else if (['!honk', 'honk'].includes(cmd)) {
             client.sendMessage(from, 'Honk Honk!!')
         }
 
         // Command Menu & informasi
-        if (['!help', '!menu'].includes(text)) {
+        if (cmd == '!help') {
             const contact = await msg.getContact()
             client.sendMessage(from, await resChat.Menu(contact))
-        } else if (['!covid', '!covid19', '!covid-19'].includes(text)) {
+        } else if (['!covid', '!covid19'].includes(cmd)) {
             client.sendMessage(from, await resChat.SubMenu())
-        } else if (text == '!inkubasi') {
-            client.sendMessage(from, await resChat.Inkubasi())
-        } else if (text == '!gejala') {
-            client.sendMessage(from, await resChat.Gejala())
-        } else if (text == '!peta') {
-            client.sendMessage(from, await resChat.PetaProv())
-        } else if (text == '!data') {
-            client.sendMessage(from, await resChat.DataNasional())
-        } else if (text == '!sumber') {
-            client.sendMessage(from, await resChat.SumberData())
         }
 
         // Command Get Data
-        if (text == '!global') {
-            console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Request Data Global).`)
+        if (cmd == '!global') {
+            c.log('Request Data Global.')
             client.sendMessage(from, await resChat.Global())
-        } else if (['!corona', '!nasional'].includes(text)) {
-            console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Request Nasional).`)
+        } else if (['!corona', '!nasional'].includes(cmd)) {
+            c.log('Request Nasional.')
             client.sendMessage(from, await resChat.Nasional())
-        } else if (text == '!jabar') {
-            console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Request Data Jabar.`)
+        } else if (cmd == '!jabar') {
+            c.log('Request Data Jabar.')
             client.sendMessage(from, await resChat.Jabar())
-        } else if (text == '!jateng') {
-            console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Request Data jateng.`)
+        } else if (cmd == '!jateng') {
+            c.log('Request Data jateng.')
             client.sendMessage(from, await resChat.Jateng())
-        } else if (text == '!jatim') {
-            console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Request Data Jatim.`)
+        } else if (cmd == '!jatim') {
+            c.log('Request Data Jatim.')
             client.sendMessage(from, await resChat.Jatim())
-        } else if (text == '!jakarta') {
-            console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Request Data Jakarta.`)
-            client.sendMessage(from, await resChat.Jakarta())
-        } else if (text == '!bandung') {
-            console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Request Data Bandung.`)
+        } else if (cmd == '!bandung') {
+            c.log(' Request Data Bandung.')
             client.sendMessage(from, await resChat.Bandung())
-        } else if (text == '!bekasi') {
-            console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Request Data Bekasi.`)
-            client.sendMessage(from, await resChat.Bekasi())
-        } else if (text == '!wisma-atlit') {
-            console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Request Data Wisma Atlit.`)
+        } else if (cmd == '!wisma-atlit') {
+            c.log(' Request Data Wisma Atlit.')
             client.sendMessage(from, await resChat.WismaAtlit())
-        } else if (text == '!lokasi') {
+        } else if (cmd == '!lokasi') {
             if (hasQuotedMsg) {
                 const quotedMsg = await msg.getQuotedMessage()
                 if (quotedMsg.location !== undefined) {
-                    console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Request Status Zona (${quotedMsg.location.latitude},${quotedMsg.location.longitude}).`)
+                    c.log(` Request Status Zona (${quotedMsg.location.latitude},${quotedMsg.location.longitude}).`)
                     const zoneStatus = await getAll(quotedMsg.location.latitude, quotedMsg.location.longitude)
                     if (zoneStatus.kode == 200) {
                         let data = ''
@@ -198,195 +170,247 @@ client.on('message', async msg => {
         }
 
         // Command Notification
-        if (text == '!aktif') {
-            const chat = await msg.getChat()
-            const sender = chat.isGroup ? author : from
-            // Cek & Input data ke MongoDB
-            const dbDataUsers = await db.getDataUsers(DB, sender)
-            if (body && dbDataUsers.length < 1) {
-                dbDataUsers.push(sender)
-                await db.insertDataUsers(DB, sender)
-                await client.sendMessage(sender, `Selamat, nomor hp anda "${sender.split('@c.us')[0]}" berhasil diregistrasi kedalam daftar notifikasi, anda akan mendapat notifikasi ketika ada pembaruan data.`)
+        if (cmd == '!aktif') {
+            const sender = isGroupMsg ? author : from
+            // Cek & Input data di DB
+            const cekMember = await db.findMember(sender)
+            if (!cekMember) {
+                await db.insertMember(sender)
+                client.sendMessage(sender, `Selamat, nomor hp anda "${sender.split('@c.us')[0]}" berhasil diregistrasi kedalam daftar notifikasi, anda akan mendapat notifikasi ketika ada pembaruan data.`)
             } else {
-                await client.sendMessage(sender, 'Maaf, nomor hp anda telah diregistrasi. Untuk membatalkan kirim *!mati*')
+                client.sendMessage(sender, 'Maaf, nomor hp anda telah diregistrasi. Untuk membatalkan kirim *!mati*')
             }
-        } else if (text == '!mati') {
-            const chat = await msg.getChat()
-            const sender = chat.isGroup ? author : from
-            const dbDataUsers = await db.getDataUsers(DB, sender)
-            if (body && dbDataUsers.length < 1) {
-                await client.sendMessage(sender, 'Maaf, Nomor anda belum diregistrasi. Registrasi nomor anda dengan kirim *!aktif*')
+        } else if (cmd == '!mati') {
+            const sender = isGroupMsg ? author : from
+            // Cek & Delete data di DB
+            const cekMember = await db.findMember(sender)
+            if (cekMember) {
+                await db.deleteMember(sender)
+                client.sendMessage(sender, 'Nomor anda telah dihapus dari daftar notifikasi')
             } else {
-                await db.deleteDataUsers(DB, sender)
-                await client.sendMessage(sender, 'Nomor anda telah dihapus dari daftar notifikasi')
+                client.sendMessage(sender, 'Maaf, Nomor anda belum diregistrasi. Registrasi nomor anda dengan kirim *!aktif*')
             }
         }
-    }
-
-    if (from == config.admin || config.bot) {
-        // Command Admin
-        if (body.startsWith('!state-')) {
-            const state = body.split('-')[1]
-            if (state == 'online') {
-                if (config.online) {
-                    client.sendMessage(from, 'Bot is Online.')
-                } else {
-                    config.online = true
-                    client.sendMessage(from, 'Bot is now Online.')
-                }
-            } else if (state == 'offline') {
-                if (!config.online) {
-                    client.sendMessage(from, 'Bot is Offline')
-                } else {
-                    config.online = false
-                    client.sendMessage(from, 'Bot is now Offline')
-                }
-            } else if (state == 'status') {
-                config.online ? client.sendMessage(from, 'Bot is Online') : client.sendMessage(from, 'Bot is Offline')
+    } else if (body.startsWith('$')) {
+        // This is the condition if you haven't entered admin number to DB
+        if (getAdmin.length == 0) {
+            if (body.startsWith('$addMin')) {
+                db.insertAdmin(from)
+                client.sendMessage(from, 'Alright, your highness!')
+            } else {
+                client.sendMessage(from, 'Please Add admin number!')
+                client.sendMessage(from, 'Send: $addMin')
             }
-        } else if (text == '!chats') {
-            const chats = await client.getChats()
-            const group = chats.filter(x => x.isGroup == true)
-            const personalChat = chats.filter(x => x.isGroup == false)
-            const archivedChat = chats.filter(x => x.archived == true)
-            const getListUsers = await db.getAllDataUsers(DB)
-            client.sendMessage(from, `The bot has...\nChats Open: ${chats.length}\nGroups Chats: ${group.length}\nPersonal Chats: ${personalChat.length}\nArchived Chats: ${archivedChat.length}\nUnArchived Chats: ${personalChat.length - archivedChat.length}\nNotification User: ${getListUsers.length}`)
-        } else if (text == '!broadcast') {
-            const getListUsers = await db.getAllDataUsers(DB)
-            getListUsers.map((item, index) => {
-                const number = item.phone_number
-                setTimeout(async function () {
-                    console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Send Broadcast to ${number} (${index})`)
-                    client.sendMessage(number, await resChat.Broadcast())
-                }, index * 500)
-            })
-        } else if (text == '!dbcheck') {
-            const UnRegist = []
-            const getListUsers = await db.getAllDataUsers(DB)
-            getListUsers.map((item, index) => {
-                const number = item.phone_number
-                const status = client.isRegisteredUser(item.phone_number)
-                if (status == false) UnRegist.push(number)
-            })
-            if (UnRegist.length !== 0) {
-                client.sendMessage(from, `unRegister number in DB:\n${UnRegist.toString().replace(/,/g, '\n')}`)
-                client.sendMessage(from, 'Delete unRegister number from DB...')
-                UnRegist.map(async (number) => {
-                    await db.deleteDataUsers(DB, number)
+        }
+
+        if (isAdmin) {
+            if (!isGroupMsg && isChat) c.logz(color(body, 'blue'), 'from', color(from.replace('@c.us', ''), 'blue'))
+            if (isGroupMsg && isChat) c.logz(color(body, 'blue'), 'from', color(from.replace('@g.us', ''), 'blue'))
+            // Command Admin
+            if (body.startsWith('$state')) {
+                const status = `\nBot Status:\n- 🤖 Online: ${config.online}\n- 🗄️ Auto Archive: ${config.archive}\n`
+                 switch (body.split('-')[1]) {
+                    case 'status':
+                        client.sendMessage(from, status)
+                        break
+                    case 'online':
+                        if (config.online) {
+                            config.online = false
+                            client.sendMessage(from, '🤖 Bot is now Offline.')
+                        } else {
+                            config.online = true
+                            client.sendMessage(from, '🤖 Bot is now Online.')
+                        }
+                        break
+                    case 'archive':
+                        if (config.archive) {
+                            config.archive = false
+                            client.sendMessage(from, '🗄️ Auto archive deactivated')
+                        } else {
+                            config.online = false
+                            client.sendMessage(from, '🗄️ Auto archive activated')
+                        }
+                        break
+                    default:
+                        client.sendMessage(from, '🤖 Config Command:\n$state-status: melihat config bot\n$state-online: merubah bot menjadi online/offline\n$state-archive: mengaktifkan/mematikan auto archive')
+                        break
+                }
+            } else if (body.startsWith('$chats')) {
+                const chats = await client.getChats()
+                const group = chats.filter(x => x.isGroup == true)
+                const personalChat = chats.filter(x => x.isGroup == false)
+                const archivedChat = chats.filter(x => x.archived == true)
+                const getListUsers = await db.getAllMember()
+                client.sendMessage(from, `The bot has...\nChats Open: ${chats.length}\nGroups Chats: ${group.length}\nPersonal Chats: ${personalChat.length}\nArchived Chats: ${archivedChat.length}\nUnArchived Chats: ${personalChat.length - archivedChat.length}\nNotification User: ${getListUsers.length}`)
+            } else if (body.startsWith('$broadcast')) {
+                const messages = body.substr(body.indexOf(' ') + 1)
+                const getListUsers = await db.getAllMember()
+                if (getListUsers.length == 0) {
+                    client.sendMessage(from, 'No member!')
+                } else {
+                    getListUsers.map((item, index) => {
+                        const number = item.phone
+                        setTimeout(async function () {
+                            c.log(` (${index}) Send Broadcast to ${number} > ${messages}`)
+                            await client.sendMessage(number, messages)
+                        }, index * 500)
+                    })
+                }
+            } else if (body.startsWith('$dbcheck')) {
+                const UnRegist = []
+                const getListUsers = await db.getAllMember()
+                if (getListUsers.length !== 0) {
+                    getListUsers.map((item, index) => {
+                        const number = item.phone
+                        const status = client.isRegisteredUser(item.phone)
+                        if (status == false) UnRegist.push(number)
+                    })
+
+                    if (UnRegist.length !== 0) {
+                        client.sendMessage(from, `unRegister number in DB:\n${UnRegist.toString().replace(/,/g, '\n')}`)
+                        client.sendMessage(from, 'Delete unRegister number from DB...')
+                        UnRegist.map(async (number) => {
+                            await db.deleteMember(number)
+                        })
+                    } else {
+                        client.sendMessage(from, 'There is no unRegister number in DB')
+                    }
+                } else {
+                    client.sendMessage(from, 'No member!')
+                }
+            } else if (body.startsWith('$archive')) {
+                const chats = await client.getChats()
+                const personal = chats.filter(x => x.isGroup == false)
+                const unArchivedChat = personal.filter(y => y.archived == false)
+                msg.reply(`Request diterima bot akan meng-archieve ${unArchivedChat.length} personal chat.`)
+                unArchivedChat.map((z, c) => {
+                    setTimeout(() => {
+                        z.archive()
+                    }, c * 100)
                 })
-            } else {
-                client.sendMessage(from, 'There is no unRegister number in DB')
-            }
-        } else if (text == '!archive') {
-            const chats = await client.getChats()
-            const personal = chats.filter(x => x.isGroup == false)
-            const unArchivedChat = personal.filter(y => y.archived == false)
-            msg.reply(`Request diterima bot akan meng-archieve ${unArchivedChat.length} personal chat.`)
-            unArchivedChat.map((z, c) => {
-                setTimeout(() => { z.archive() }, c * 100)
-            })
-        } else if (text == '!delete') {
-            const chats = await client.getChats()
-            const personal = chats.filter(x => x.isGroup == false)
-            // Delete personal chat
-            msg.reply(`Request diterima bot akan menghapus ${personal.length} personal chat.`)
-            chats.map((x) => {
-                if (x.isGroup == false) x.delete()
-            })
-        } else if (body.startsWith('!leave ')) {
-            const chats = await client.getChats()
-            const search = chats.filter(x => x.isGroup == true)
-            const except = search.filter(x => x.id._serialized !== body.split(' ')[1])
-            // Leave from all group
-            msg.reply(`Request diterima bot akan keluar dari ${except.length} grup.`)
-            for (var i = 0; i < except.length; i++) {
-                console.log(`Keluar dari Grup: ${except[i].name}`)
-                except[i].leave()
-            }
-        } else if (body.startsWith('!join ')) {
-            const inviteCode = body.split(' ')[1]
-            try {
-                await client.acceptInvite(inviteCode)
-                msg.reply('Joined the group!')
-            } catch (e) {
-                msg.reply('That invite code seems to be invalid.')
-            }
-        } else if (body.startsWith('!sendto ')) {
-            let number = body.split(' ')[1]
-            const messageIndex = body.indexOf(number) + number.length
-            const message = body.slice(messageIndex, body.length)
-            if (number.includes('@g.us')) {
-                const group = await client.getChatById(number)
-                group.sendMessage(message)
-            } else if (!number.includes('@c.us') && !number.includes('@g.us')) {
+            } else if (body.startsWith('$delete')) {
+                const chats = await client.getChats()
+                const personal = chats.filter(x => x.isGroup == false)
+                // Delete personal chat
+                msg.reply(`Request diterima bot akan menghapus ${personal.length} personal chat.`)
+                chats.map((x) => {
+                    if (x.isGroup == false) x.delete()
+                })
+            } else if (body.startsWith('$leave')) {
+                const chats = await client.getChats()
+                let filter
+                if (body.split(' ')[1] === 'all') {
+                    // Leave from all group
+                    filter = chats.filter(x => x.isGroup == true)
+                } else {
+                    console.log('Command !leave tidak lengkap!')
+                }
+                // const filter = search.filter(x => x.id._serialized !== '')
+                msg.reply(`Request diterima bot akan keluar dari ${filter.length} grup.`)
+                for (var i = 0; i < filter.length; i++) {
+                    console.log(`Keluar dari Grup: ${filter[i].name}`)
+                    filter[i].leave()
+                }
+            } else if (body.startsWith('$join')) {
+                const inviteCode = body.split(' ')[1]
+                try {
+                    await client.acceptInvite(inviteCode)
+                    msg.reply('Joined the group!')
+                } catch (e) {
+                    msg.reply('That invite code seems to be invalid.')
+                }
+            } else if (body.startsWith('$sendto')) {
+                let number = body.split(' ')[1]
+                const messageIndex = body.indexOf(number) + number.length
+                const message = body.slice(messageIndex, body.length)
                 number = number.includes('@c.us') ? number : `${number}@c.us`
-                client.sendMessage(number, message)
+                const status = client.isRegisteredUser(number)
+                if (status) {
+                    client.sendMessage(number, message)
+                } else {
+                    client.sendMessage(from, 'sorry this number is not registered on whatsapp')
+                }
             }
+        } else {
+            !isGroupMsg && isChat ? c.logz(color(body, 'red'), 'from', color(from.replace('@c.us', ''), 'red')) : c.logz(color(body, 'red'), 'from', color(from.replace('@g.us', ''), 'red'))
+            if (!isGroupMsg && isChat && getAdmin.length != 0) msg.reply('Wait, who are you???')
         }
+    } else if (cmd && config.online == false && !isAdmin) {
+        client.sendMessage(from, 'Maaf, Bot sedang Offline.')
+    } else {
+        if (!isGroupMsg && isChat) c.logy(color(body.substr(0, 15)), 'from', color(from.replace('@c.us', '')))
+        if (isGroupMsg && isChat) c.logy(color(body.substr(0, 15)), 'from', color(from.replace('@g.us', '')))
     }
 
-    if (keyword.includes(text) && (from !== config.admin || config.bot)) {
+    if (config.archive && !isAdmin) {
         setTimeout(async function () {
             const chat = await msg.getChat()
-            if (!chat.isGroup) chat.archive()
-            }, 500)
+            chat.archive()
+        }, 500)
     }
 })
 
-// ======================= mqtt
+// ==========#yogs#========= mqtt connect & subs
 
 listen.on('connect', () => {
     listen.subscribe(process.env.MQTT_TOPIC, function (err) {
-        if (!err) console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Mqtt topic [${process.env.MQTT_TOPIC}] subscribed!`)
+        if (!err) c.log(`Mqtt topic [${process.env.MQTT_TOPIC}] subscribed!`)
     })
 })
 
+// ==========#yogs#========= this will run if there is a new mqtt message
+
 listen.on('message', async (topic, message) => {
-    console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] MQTT: ${message.toString()}`)
+    c.log(` MQTT: ${message.toString()}`)
     if (message.toString() == 'New Update!') {
-        const getListUsers = await db.getAllDataUsers(DB)
-        fs.readFile('./CoronaService/data.json', 'utf-8', function (err, data) {
-            if (err) throw err
-            const localData = JSON.parse(data)
-            const textUpdate = `
+        const getListUsers = await db.getAllMember(DB)
+        if (getListUsers.length != 0) {
+            fs.readFile('./CoronaService/data.json', 'utf-8', function (err, data) {
+                if (err) throw err
+                const localData = JSON.parse(data)
+                const textUpdate = `
 *COVID-19 Update!!*
 Negara: ${localData.Country}
 Hari Ke: ${localData.Day}
 Provinsi Terdampak: 34
-
+    
 Total ODP: ${localData.TotalODP}
 Total PDP: ${localData.TotalPDP}
-
+    
 Total Kasus: ${localData.TotalCases}
 *Kasus Baru: ${localData.NewCases}*
-
+    
 Pasien Dirawat: ${localData.ActiveCases}
 *Dirawat Baru: ${localData.NewActiveCases}*
-
+    
 Pasien Sembuh: ${localData.TotalRecovered}
 *Sembuh Baru: ${localData.NewRecovered}*
 Presentase Sembuh: ${localData.PresentaseRecovered}
-
+    
 Pasien Meninggal: ${localData.TotalDeaths}
 *Meninggal Baru: ${localData.NewDeaths}*
 Presentase Meninggal: ${localData.PresentaseDeath}
-                    
+                        
 Di Perbarui Pada: 
 ${localData.lastUpdate}
 Sumber: 
 _https://www.covid19.go.id_
-                    `
-            getListUsers.map((item, index) => {
-                const number = item.phone_number
-                setTimeout(async function () {
-                    console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Send Corona Update to ${number} (${index})`)
-                    try {
-                        await client.sendMessage(number, textUpdate)
-                    } catch (error) {
-                        console.log(error.message)
-                    }
-                }, index * 1100) // Delay 1,1 Sec
+    `
+                getListUsers.map((item, index) => {
+                    const number = item.phone
+                    setTimeout(() => {
+                        c.log(` [${index}] Send Corona Update to ${number}`)
+                        try {
+                            client.sendMessage(number, textUpdate)
+                        } catch (error) {
+                            console.log(error.message)
+                        }
+                    }, index * 1100) // Delay 1,1 Sec
+                })
             })
-        })
+        } else {
+            const getAdmin = await db.getAllAdmin()
+            client.sendMessage(getAdmin[0], 'No member!')
+        }
     }
 })

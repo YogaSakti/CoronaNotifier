@@ -70,118 +70,31 @@ async function getGlobal () {
     })
 }
 
-async function getCountry (id) {
-    return new Promise(async (resolve, reject) => {
-        await fetch(`${endpoints.Global}countries/${id}`)
-            .then(response => response.json())
-            .then(json => {
-                const data = JSON.stringify({
-                    confirmed: json.confirmed.value,
-                    recovered: json.recovered.value,
-                    deaths: json.deaths.value,
-                    lastUpdate: moment(json.lastUpdate).format('LLLL')
-                })
-                resolve(data)
-            })
-            .catch((err) => {
-                reject(err)
-            })
-    })
-};
-
-async function getHarian () {
-    return new Promise(async (resolve, reject) => {
-        await fetch(endpoints.statistikHarianAll)
-            .then(response => response.json())
-            .then(json => {
-                let result = json.features
-                result = result.map(x => x.attributes)
-                resolve(result)
-            })
-            .catch((err) => {
-                reject(err)
-            })
-    })
-};
-
 async function getProv () {
     return new Promise(async (resolve, reject) => {
-        const response = await fetch(endpoints.dataKemkes)
-        const resCookie = await response.headers.get('set-cookie').split(' ')
-        const Cookie = `${resCookie[0]}${resCookie[7].replace(';', '')}`
-        const $ = cheerio.load(await response.text())
-        const csrfToken = $("meta[name='csrf-token']").attr('content')
-        const getData = await fetch(`${endpoints.dataKemkes}/emerging/data_provinces`, {
-            method: 'POST',
-            headers: {
-                Cookie,
-                'X-CSRF-TOKEN': csrfToken,
-                'Content-Type': 'application/x-www-form-urlencoded',
-                Accept: 'application/json, text/javascript, */*; q=0.01'
-            },
-            body: 'emerging=COVID-19'
-        })
-        const data = await getData.json()
-        const arrProv = []
-        let odp = 0
-        let pdp = 0
-        if (data.features.length > 34) {
-            for (var i = 34; i < data.features.length; i++) {
-                const x = data.features
-                delete x[i].properties.latitude
-                delete x[i].properties.longitude
-                arrProv.push(x[i].properties)
-                parseInt(x[i].properties.total_odp) ? odp += x[i].properties.total_odp : ''
-                parseInt(x[i].properties.total_pdp) ? pdp += x[i].properties.total_pdp : ''
-            }
-        } else {
-            data.features.map((x) => {
-                arrProv.push(x.properties)
-                delete x.properties.latitude
-                delete x.properties.longitude
-                parseInt(x.properties.total_odp) ? odp += x.properties.total_odp : ''
-                parseInt(x.properties.total_pdp) ? pdp += x.properties.total_pdp : ''
+        await fetch(endpoints.dataProvinsi)
+            .then(response => response.json())
+            .then(json => {
+                const data = json.list_data
+                const except = ['doc_count', 'jenis_kelamin', 'kelompok_umur', 'lokasi']
+                const listProv = data.map(x =>
+                    Object.keys(x)
+                    .filter(k => !except.includes(k))
+                    .reduce((acc, key) => ((acc[key] = x[key]), acc), {})
+                )
+                const result = {
+                    last_date: json.last_date,
+                    data: listProv
+                }
+                console.log(result)
+                resolve(result)
             })
-        }
-        const topCase = [...arrProv.sort((a, b) => b.total_case - a.total_case).slice(0, 5)].map((x) => {
-            return {
-                provinsi: x.provinsi,
-                total_case: x.total_case
-            }
-        })
-        const topRecover = [...arrProv.sort((a, b) => b.total_recover - a.total_recover).slice(0, 5)].map((x) => {
-            return {
-                provinsi: x.provinsi,
-                total_recover: x.total_recover
-            }
-        })
-        const topDied = [...arrProv.sort((a, b) => b.total_died - a.total_died).slice(0, 5)].map((x) => {
-            return {
-                provinsi: x.provinsi,
-                total_died: x.total_died
-            }
-        })
-        const result = {
-            result: arrProv.sort((a, b) => a.id - b.id),
-            top: {
-                topCase,
-                topRecover,
-                topDied
-            },
-            total: {
-                prov: arrProv.length,
-                odp: odp,
-                pdp: pdp
-            }
-        }
-        // console.log(result)
-        resolve(result)
     })
 }
 
 async function getJabar () {
     return new Promise(async (resolve, reject) => {
-        await fetch(endpoints.dataProvjabarV2)
+        await fetch(endpoints.dataProvjabar)
             .then(response => response.json())
             .then(json => {
                 const result = json.data.content
@@ -279,54 +192,6 @@ async function getJatim () {
     })
 };
 
-async function getjakarta () {
-    return new Promise(async (resolve, reject) => {
-        await fetch(endpoints.dataProvDKIJakarta)
-            .then(response => response.json())
-            .then(json => {
-                const result = json.features.map(x => x.attributes)
-                resolve(result[0])
-            })
-            .catch((err) => {
-                reject(err)
-            })
-    })
-};
-
-async function getBekasi () {
-    return new Promise(async (resolve, reject) => {
-        await fetch(endpoints.dataBekasi)
-            .then(res => res.text())
-            .then(text => {
-                const $ = cheerio.load(text)
-                const dataTotal = []
-                const dataDetail = []
-                $('div.box-content').find('h1').each((i, e) => {
-                    dataTotal.push(parseInt($(e).text().replace(' Orang', '').trim().split(',').join('')))
-                })
-                $('div.box-content').find('div.align-right').each((i, e) => {
-                    dataDetail.push(parseInt($(e).text().replace(' Orang', '').trim().split(',').join('')))
-                })
-                const result = {
-                    odp: dataTotal[0],
-                    odp_dirawat: dataDetail[0],
-                    odp_selesai: dataDetail[1],
-                    pdp: dataTotal[1],
-                    pdp_dirawat: dataDetail[2],
-                    pdp_sembuh: dataDetail[3],
-                    total_positif: dataDetail[4],
-                    positif_sembuh: dataDetail[5],
-                    last_update: $('div.col-md-12').children('h2').find('strong[style="color:#fff"]').text().split(':')[1].trim()
-                }
-                // console.log(result)
-                resolve(result)
-            })
-            .catch((err) => {
-                reject(err)
-            })
-    })
-};
-
 async function getBandung () {
     return new Promise(async (resolve, reject) => {
         const options = {
@@ -388,9 +253,7 @@ module.exports = {
     getWismaAtlit,
     getProv,
     getBandung,
-    getBekasi,
     getJabar,
     getJateng,
-    getJatim,
-    getjakarta
+    getJatim
 }

@@ -20,6 +20,7 @@ module.exports = {
         "no-unused-expressions":0,
         "no-self-assign": 0,
         "no-undef": 0,
-        "no-async-promise-executor": 0
+        "no-async-promise-executor": 0,
+        "prefer-promise-reject-errors": 0
     }
 };

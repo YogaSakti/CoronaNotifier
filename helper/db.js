@@ -1,96 +1,135 @@
-/* eslint-disable prefer-promise-reject-errors */
-const MongoClient = require('mongodb').MongoClient
-const moment = require('moment-timezone')
-// MongoDB Initialize
-const DB_OPTIONS = {
-    poolSize: 50,
-    keepAlive: 15000,
-    socketTimeoutMS: 15000,
-    connectTimeoutMS: 15000,
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-}
-const DB_URL = process.env.DB_URL
-const DB_NAME = process.env.DB_NAME
-const DB_COLLECTION = process.env.DB_COLLECTION
+const low = require('lowdb')
+const path = require('path')
+const FileSync = require('lowdb/adapters/FileSync')
+const db = low(new FileSync(path.join(__dirname, '/db.json')))
 
-const connect = () => new Promise((resolve, reject) => {
-        MongoClient.connect(DB_URL, DB_OPTIONS, function (err, client) {
-            if (err) throw err
-            console.log(`[ ${moment().tz('Asia/Jakarta').format('HH:mm:ss')} ] Connected successfully to Database.`)
-            resolve(client.db(DB_NAME))
-        })
-    })
+db.defaults({
+    admins: [],
+    members: []
+}).write()
 
-// Fungsi input data registrasi
-const insertDataUsers = (db, author) => new Promise((resolve, reject) => {
-    const allRecords = db.collection(DB_COLLECTION).insertOne({
-        phone_number: author
-    })
-    if (!allRecords) {
-        reject('Error Mongo', allRecords)
+// Admin
+const insertAdmin = (number) => new Promise((resolve, reject) => {
+    const insertRecords = db
+        .get('admins')
+        .push({ phone: number })
+        .write()
+    if (!insertRecords) {
+        reject('[DB] Error!', insertRecords)
     } else {
-        resolve(allRecords)
+        console.log('[DB] Insert Admin: ', number)
+        resolve(insertRecords)
     }
 })
 
-// Fungsi hapus data registrasi
-const deleteDataUsers = (db, author) => new Promise((resolve, reject) => {
-    const allRecords = db.collection(DB_COLLECTION).findOneAndDelete({
-        phone_number: author
-    })
-    if (!allRecords) {
-        reject('Error Mongo', allRecords)
+// Fungsi hapus data
+const deleteAdmin = (number) => new Promise((resolve, reject) => {
+    const deleteRecords = db
+        .get('admins')
+        .remove({ phone: number })
+        .write()
+    if (!deleteRecords) {
+        reject('[DB] Error!', deleteRecords)
     } else {
-        resolve(allRecords)
+        console.log('[DB] Delete Admin: ', number)
+        resolve(deleteRecords)
     }
 })
 
-// Fungsi membaca data registrasi
-const getDataUsers = (db, author) => new Promise((resolve, reject) => {
-    const allRecords = db.collection(DB_COLLECTION).find({
-        phone_number: author
-    }).toArray()
-    if (!allRecords) {
-        reject('Error Mongo', allRecords)
+// Fungsi mencari data
+const findAdmin = (number) => new Promise((resolve, reject) => {
+    const findRecords = db
+        .get('admins')
+        .some({ phone: number })
+        .value()
+    if (!findRecords) {
+        resolve(findRecords)
     } else {
-        resolve(allRecords)
+        // console.log('[DB] Find Admin: ', number)
+        resolve(findRecords)
     }
 })
 
 // Fungsi membaca semua data registrasi
-const getAllDataUsers = (db) => new Promise((resolve, reject) => {
-    const allRecords = db.collection(DB_COLLECTION).find({}).toArray()
+const getAllAdmin = () => new Promise((resolve, reject) => {
+    const allRecords = db
+        .get('admins')
+        .toArray()
+        .value()
     if (!allRecords) {
-        reject('Error Mongo', allRecords)
+        reject('[DB] Error!', allRecords)
     } else {
+        // console.log('[DB] Get All Admin')
         resolve(allRecords)
     }
 })
 
-// Json to DB
-// const User = require('./../user/user.json')
-// async function insertToDB () {
-//     return new Promise(async (resolve, reject) => {
-//         // const dbClient = await MongoClient.connect(DB_CONN, DB_OPTIONS)
-//         // const db = dbClient.db('bot')
-//         // console.log('Database ready!')
-//         for (var i = 0; i < User.length; i++) {
-//             const dbDataUsers = await getDataUsers(db, User[i].user)
-//             if (dbDataUsers.length < 1) {
-//                 //   insertDataUsers(db, User[i].user)
-//                 console.log(`Nomor ${User[i].user} ditambahkan ke database`)
-//             } else {
-//                 console.log('Nomor sudah ada di database')
-//             }
-//         }
-//     })
-// };
+// Member
+
+// Fungsi input data
+const insertMember = (number) => new Promise((resolve, reject) => {
+    const insertRecords = db
+        .get('members')
+        .push({ phone: number })
+        .write()
+    if (!insertRecords) {
+        reject('[DB] Error!', insertRecords)
+    } else {
+        console.log('[DB] Insert Member: ', number)
+        resolve(insertRecords)
+    }
+})
+
+// Fungsi hapus data
+const deleteMember = (number) => new Promise((resolve, reject) => {
+    const deleteRecords = db
+        .get('members')
+        .remove({ phone: number })
+        .write()
+    if (!deleteRecords) {
+        reject('[DB] Error!', deleteRecords)
+    } else {
+        console.log('[DB] Delete Member: ', number)
+        resolve(deleteRecords)
+    }
+})
+
+// Fungsi mencari data
+const findMember = (number) => new Promise((resolve, reject) => {
+    const findRecords = db
+        .get('members')
+        .some({ phone: number })
+        .value()
+    if (!findRecords) {
+        resolve(findRecords)
+        // reject('[DB] Error!', findRecords)
+    } else {
+        // console.log('[DB] Find Member: ', number)
+        resolve(findRecords)
+    }
+})
+
+// Fungsi membaca semua data registrasi
+const getAllMember = () => new Promise((resolve, reject) => {
+    const allRecords = db
+        .get('members')
+        .toArray()
+        .value()
+    if (!allRecords) {
+        reject('[DB] Error!', allRecords)
+    } else {
+        // console.log('[DB] Get All Member')
+        resolve(allRecords)
+    }
+})
 
 module.exports = {
-    insertDataUsers,
-    deleteDataUsers,
-    getDataUsers,
-    getAllDataUsers,
-    connect
+    insertAdmin,
+    deleteAdmin,
+    findAdmin,
+    getAllAdmin,
+    insertMember,
+    deleteMember,
+    findMember,
+    getAllMember
 }

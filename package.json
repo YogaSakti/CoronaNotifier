@@ -1,11 +1,11 @@
 {
-  "name": "coronanotifier",
+  "name": "coronaotifier",
   "version": "1.0.0",
   "description": "Notification Bot",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "service": "node CoronaService\\corona.js",
+    "corona": "node CoronaService\\corona.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "yogs",
@@ -15,18 +15,18 @@
     "cheerio": "^1.0.0-rc.3",
     "dotenv": "^8.2.0",
     "fs": "0.0.1-security",
+    "lowdb": "^1.0.0",
     "moment-timezone": "^0.5.31",
-    "mongodb": "^3.5.7",
     "mqtt": "^3.0.0",
     "node-fetch": "^2.6.0",
     "qrcode-terminal": "^0.12.0",
-    "whatsapp-web.js": "^1.5.1"
+    "whatsapp-web.js": "^1.6.1"
   },
   "devDependencies": {
     "babel-eslint": "^8.2.6",
     "eslint": "^6.8.0",
     "eslint-config-standard": "^14.1.1",
-    "eslint-plugin-import": "^2.20.2",
+    "eslint-plugin-import": "^2.21.2",
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-promise": "^4.2.1",
     "eslint-plugin-standard": "^4.0.1"
