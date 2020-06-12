@@ -3,15 +3,11 @@
 [![whatsapp-web.js version](https://img.shields.io/github/package-json/dependency-version/YogaSakti/CoronaNotifier/whatsapp-web.js)](https://www.npmjs.com/package/whatsapp-web.js)
 ![Twitter](https://img.shields.io/twitter/follow/teman_bahagia?style=social)
 
-Corona Notifier is a Whatsapp automatic notification robot using MQTT, nodeJS & MongoDB. The Corona Service will collect latest data about the COVID-19 indonesian case from [indonesia-covid-19-api](https://indonesia-covid-19.mathdro.id/api) by [mathdroid](https://github.com/mathdroid/indonesia-covid-19-api) 
-
-#### The Diagram
-![Diagram](image/Diagram.png)
-
+Corona Notifier is a Whatsapp automatic notification robot using MQTT, nodeJS & lowDB. The Corona Service will collect latest data about the COVID-19 indonesian case from [indonesia-covid-19-api](https://indonesia-covid-19.mathdro.id/api) by [mathdroid](https://github.com/mathdroid/indonesia-covid-19-api) 
 
 ## Getting Started
 
-This project require MQTT broker, nodeJS & MongoDB.
+This project require MQTT broker, nodeJS & lowDB.
 
 ### Install
 Clone this project
@@ -38,15 +34,10 @@ Edit .env file:
 ```
 MQTT_URL=mqtt://
 MQTT_TOPIC=
-ADMIN_NUMBER= 62...
-BOT_NUMBER= 62...
-DB_URL = 'mongodb+srv://'
-DB_NAME = 
-DB_COLLECTION =
 ```
 
 ### Usage
-run the Whatsapp bot
+1. run the Whatsapp bot
 
 ```bash
 > npm run start
@@ -54,10 +45,10 @@ run the Whatsapp bot
 
 after running it you need to scan the qr
 
-run the corona service 
+2. run the corona service 
 
 ```bash
-> npm run service
+> npm run corona
 ```
 
 ## Bot Whatsapp Command 
@@ -72,8 +63,8 @@ COVID-19
 !aktif  =>  .......
 !mati  =>  ......
 ```
-2. !ping 
-Using this command will response "pong"
+2. !covid19
+Using this command will response sub list of available command
 3. !corona 
 Using this command will return information about current indonesia corona case and global case, example output
 ```
@@ -98,10 +89,7 @@ Dicek pada: xxx, xx xxxx 2020 | xx.xx WIB
 Using this command will enable notifications when there is a data update.
 5. !mati 
 Using this command will disable notifications when there is a data update.
-6. !data
-Using this command will return a list of websites that contain coronavirus data.
-7. !peta 
-Using this command will return the corona virus distribution map information.
+
 
 
 ## Contributing
