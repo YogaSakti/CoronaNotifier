@@ -52,7 +52,6 @@ after running it you need to scan the qr
 ```
 
 ## Bot Whatsapp Command 
-(WARNING: This is only available with Bahasa Language)
 
 This bot is for covid-19 information purpose by automatically answer for available data, by using the available command :
 1. !help 
