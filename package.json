@@ -16,7 +16,7 @@
     "dotenv": "^8.2.0",
     "fs": "0.0.1-security",
     "lowdb": "^1.0.0",
-    "moment-timezone": "^0.5.31",
+    "moment-timezone": "^0.5.35",
     "mqtt": "^3.0.0",
     "node-fetch": "^2.6.0",
     "qrcode-terminal": "^0.12.0",
